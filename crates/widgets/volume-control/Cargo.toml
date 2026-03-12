@@ -1,0 +1,21 @@
+[package]
+name = "volume-control"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "System volume control widget with per-app volumes and device switching"
+
+[[bin]]
+name = "rw-volume"
+path = "src/main.rs"
+
+[dependencies]
+widget-core = { path = "../../widget-core" }
+gtk4.workspace = true
+gtk4-layer-shell.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+toml.workspace = true
+serde.workspace = true
+dirs = "5"

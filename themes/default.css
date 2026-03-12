@@ -1,0 +1,210 @@
+/* rust-widgets default theme - Material You / SeaGlass */
+
+/* Base colors */
+@define-color bg-base rgba(26, 28, 30, 0.9);
+@define-color bg-surface rgba(41, 42, 45, 0.8);
+@define-color bg-container rgba(68, 71, 78, 0.6);
+@define-color on-surface #e3e2e6;
+@define-color on-surface-variant #c4c6cf;
+@define-color primary #a8c7fa;
+@define-color secondary #bec6dc;
+@define-color error #ffb4ab;
+@define-color success #a6e3a1;
+@define-color warning #ffb74d;
+@define-color outline rgba(147, 143, 153, 0.3);
+
+/* Widget window */
+.widget-window {
+    background: @bg-base;
+    border-radius: 16px;
+    border: 1px solid @outline;
+    padding: 16px;
+}
+
+/* Control center specific */
+.control-center {
+    min-width: 360px;
+}
+
+.control-center .section {
+    background: @bg-surface;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+}
+
+.control-center .section-title {
+    color: @on-surface-variant;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+/* Quick toggles */
+.toggle-button {
+    background: @bg-container;
+    border-radius: 12px;
+    padding: 12px;
+    min-width: 64px;
+    min-height: 64px;
+}
+
+.toggle-button:hover {
+    background: alpha(@primary, 0.2);
+}
+
+.toggle-button.active {
+    background: @primary;
+    color: #1a1c1e;
+}
+
+.toggle-button .icon {
+    font-size: 24px;
+}
+
+.toggle-button .label {
+    font-size: 10px;
+    margin-top: 4px;
+}
+
+/* Sliders */
+.slider-row {
+    padding: 8px 0;
+}
+
+.slider-row .icon {
+    font-size: 20px;
+    color: @on-surface-variant;
+    min-width: 32px;
+}
+
+.slider-row scale {
+    margin: 0 12px;
+}
+
+.slider-row scale trough {
+    background: @bg-container;
+    border-radius: 8px;
+    min-height: 8px;
+}
+
+.slider-row scale highlight {
+    background: @primary;
+    border-radius: 8px;
+}
+
+.slider-row scale slider {
+    background: @on-surface;
+    border-radius: 50%;
+    min-width: 16px;
+    min-height: 16px;
+}
+
+/* Stats section */
+.stat-row {
+    padding: 6px 0;
+}
+
+.stat-row .label {
+    color: @on-surface-variant;
+    font-size: 12px;
+}
+
+.stat-row .value {
+    color: @on-surface;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.stat-row .bar {
+    background: @bg-container;
+    border-radius: 4px;
+    min-height: 4px;
+    margin-top: 4px;
+}
+
+.stat-row .bar .fill {
+    background: @primary;
+    border-radius: 4px;
+    min-height: 4px;
+}
+
+.stat-row .bar .fill.warning {
+    background: @warning;
+}
+
+.stat-row .bar .fill.critical {
+    background: @error;
+}
+
+/* OSD widgets */
+.osd {
+    background: @bg-base;
+    border-radius: 24px;
+    padding: 16px 24px;
+    min-width: 200px;
+}
+
+.osd .icon {
+    font-size: 24px;
+    color: @on-surface;
+    margin-right: 16px;
+}
+
+.osd .bar {
+    background: @bg-container;
+    border-radius: 4px;
+    min-height: 8px;
+    min-width: 150px;
+}
+
+.osd .bar .fill {
+    background: @primary;
+    border-radius: 4px;
+    min-height: 8px;
+}
+
+.osd .percentage {
+    color: @on-surface;
+    font-size: 14px;
+    font-weight: 500;
+    margin-left: 12px;
+    min-width: 40px;
+}
+
+/* Power menu */
+.power-menu {
+    padding: 24px;
+}
+
+.power-menu .button {
+    background: @bg-surface;
+    border-radius: 16px;
+    padding: 24px;
+    min-width: 80px;
+    min-height: 80px;
+    margin: 8px;
+}
+
+.power-menu .button:hover {
+    background: alpha(@primary, 0.2);
+}
+
+.power-menu .button .icon {
+    font-size: 32px;
+    color: @on-surface;
+}
+
+.power-menu .button .label {
+    font-size: 12px;
+    color: @on-surface-variant;
+    margin-top: 8px;
+}
+
+.power-menu .button.danger:hover {
+    background: alpha(@error, 0.3);
+}
+
+.power-menu .button.danger .icon {
+    color: @error;
+}

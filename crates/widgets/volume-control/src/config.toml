@@ -1,0 +1,25 @@
+[position]
+anchor = "top-right"
+margin_top = 50
+margin_right = 10
+
+[appearance]
+width = 320
+show_app_volumes = true
+show_input = true
+show_device_selector = true
+device_name_max_chars = 40
+app_name_max_chars = 20
+stream_name_max_chars = 30
+
+[behavior]
+poll_interval = 500
+close_on_escape = true
+close_on_unfocus = true
+volume_override = false  # Set to true to allow volume above 100%
+
+[animation]
+enabled = true
+type = "slide"
+direction = "up"
+duration = 250

@@ -1,0 +1,17 @@
+[package]
+name = "widget-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "CLI for rust-widgets"
+
+[[bin]]
+name = "rw"
+path = "src/main.rs"
+
+[dependencies]
+widget-core = { path = "../crates/widget-core" }
+widget-poll = { path = "../crates/widget-poll" }
+clap.workspace = true
+dirs = "5"

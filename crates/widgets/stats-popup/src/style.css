@@ -1,0 +1,80 @@
+/* Stats Popup - Material You / SeaGlass */
+
+window {
+  background: rgba(26, 28, 30, 0.92);
+  border-radius: 16px;
+  border: 1px solid rgba(147, 143, 153, 0.3);
+}
+
+.stats-container {
+  padding: 16px;
+  min-width: 280px;
+}
+
+.section-title {
+  color: #a8c7fa;
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  margin-top: 12px;
+}
+
+.stat-row {
+  margin: 4px 0;
+}
+
+.stat-label {
+  color: #c4c6cf;
+  font-size: 12px;
+  min-width: 80px;
+}
+
+.stat-value {
+  color: #e3e2e6;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+progressbar {
+  min-height: 6px;
+  margin-top: 4px;
+}
+
+progressbar trough {
+  background: rgba(68, 71, 78, 0.6);
+  border-radius: 3px;
+  min-height: 6px;
+}
+
+progressbar progress {
+  background: #a8c7fa;
+  border-radius: 3px;
+  min-height: 6px;
+}
+
+progressbar.warning progress {
+  background: #ffb74d;
+}
+
+progressbar.critical progress {
+  background: #ffb4ab;
+}
+
+.temp-label {
+  color: #c4c6cf;
+  font-size: 11px;
+}
+
+.temp-value {
+  color: #e3e2e6;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.temp-warning {
+  color: #ffb74d;
+}
+
+.temp-critical {
+  color: #ffb4ab;
+}

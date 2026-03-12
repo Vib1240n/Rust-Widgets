@@ -1,0 +1,322 @@
+/* Volume Control Widget - SeaGlass/Material You */
+
+window {
+  background: rgba(26, 28, 30, 0.94);
+  border-radius: 20px;
+  border: 1px solid rgba(147, 143, 153, 0.3);
+}
+
+.volume-control {
+  padding: 16px;
+}
+
+/* Section Headers */
+.section-header {
+  margin-bottom: 8px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #a8c7fa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Device Selector */
+.device-selector {
+  margin-bottom: 12px;
+}
+
+.device-button {
+  background: rgba(68, 71, 78, 0.5);
+  border-radius: 12px;
+  padding: 10px 14px;
+  border: none;
+  transition: all 200ms ease;
+}
+
+.device-button:hover {
+  background: rgba(168, 199, 250, 0.2);
+}
+
+.device-button.active {
+  background: rgba(168, 199, 250, 0.3);
+  border: 1px solid rgba(168, 199, 250, 0.4);
+}
+
+.device-icon {
+  color: #c4c6cf;
+  margin-right: 8px;
+}
+
+.device-button.active .device-icon {
+  color: #a8c7fa;
+}
+
+.device-name {
+  font-size: 12px;
+  color: #e3e2e6;
+}
+
+.device-button.active .device-name {
+  color: #ffffff;
+}
+
+.device-check {
+  color: #a8c7fa;
+  margin-left: 8px;
+}
+
+/* Master Volume */
+.master-volume {
+  background: rgba(68, 71, 78, 0.3);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.volume-row {
+  margin: 0;
+}
+
+.volume-icon {
+  color: #c4c6cf;
+  min-width: 24px;
+}
+
+.volume-icon.muted {
+  color: #ffb4ab;
+}
+
+.mute-button {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 8px;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.mute-button:hover {
+  background: rgba(168, 199, 250, 0.15);
+}
+
+.mute-button.muted {
+  background: rgba(255, 180, 171, 0.2);
+}
+
+.mute-button.muted:hover {
+  background: rgba(255, 180, 171, 0.3);
+}
+
+.volume-slider {
+  margin: 0 12px;
+}
+
+.volume-slider trough {
+  background: rgba(68, 71, 78, 0.6);
+  border-radius: 8px;
+  min-height: 8px;
+}
+
+.volume-slider highlight {
+  background: #a8c7fa;
+  border-radius: 8px;
+}
+
+.volume-slider.muted highlight {
+  background: #71717a;
+}
+
+.volume-slider slider {
+  background: #e3e2e6;
+  border-radius: 50%;
+  min-width: 18px;
+  min-height: 18px;
+  margin: -5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.volume-slider slider:hover {
+  background: #ffffff;
+}
+
+.volume-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e3e2e6;
+  min-width: 40px;
+}
+
+.volume-value.muted {
+  color: #71717a;
+}
+
+/* Separator */
+.section-separator {
+  background: rgba(147, 143, 153, 0.2);
+  min-height: 1px;
+  margin: 12px 0;
+}
+
+/* App Volumes */
+.app-volumes {
+  margin-top: 4px;
+}
+
+.app-row {
+  background: rgba(68, 71, 78, 0.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+.app-row:last-child {
+  margin-bottom: 0;
+}
+
+.app-icon {
+  color: #c4c6cf;
+  min-width: 20px;
+  margin-right: 10px;
+}
+
+.app-info {
+  margin-right: 8px;
+}
+
+.app-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e3e2e6;
+}
+
+.app-stream {
+  font-size: 10px;
+  color: #71717a;
+}
+
+.app-slider {
+  margin: 0 8px;
+}
+
+.app-slider trough {
+  background: rgba(68, 71, 78, 0.6);
+  border-radius: 6px;
+  min-height: 6px;
+}
+
+.app-slider highlight {
+  background: #a8c7fa;
+  border-radius: 6px;
+}
+
+.app-slider.muted highlight {
+  background: #71717a;
+}
+
+.app-slider slider {
+  background: #e3e2e6;
+  border-radius: 50%;
+  min-width: 14px;
+  min-height: 14px;
+  margin: -4px;
+}
+
+.app-volume-value {
+  font-size: 11px;
+  color: #c4c6cf;
+  min-width: 32px;
+}
+
+.app-mute-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 6px;
+  min-width: 28px;
+  min-height: 28px;
+  color: #71717a;
+}
+
+.app-mute-btn:hover {
+  background: rgba(168, 199, 250, 0.15);
+  color: #c4c6cf;
+}
+
+.app-mute-btn.muted {
+  color: #ffb4ab;
+}
+
+/* Input Section */
+.input-section {
+  margin-top: 4px;
+}
+
+.input-volume {
+  background: rgba(68, 71, 78, 0.25);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.input-icon {
+  color: #c4c6cf;
+}
+
+.input-icon.muted {
+  color: #ffb4ab;
+}
+
+/* Device List Popover */
+.device-list {
+  padding: 8px;
+}
+
+.device-list-item {
+  background: transparent;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 2px 0;
+}
+
+.device-list-item:hover {
+  background: rgba(168, 199, 250, 0.15);
+}
+
+.device-list-item.selected {
+  background: rgba(168, 199, 250, 0.25);
+}
+
+.device-list-item .device-name {
+  font-size: 12px;
+  color: #e3e2e6;
+}
+
+.device-list-item.selected .device-name {
+  color: #a8c7fa;
+  font-weight: 500;
+}
+
+/* Empty State */
+.empty-state {
+  padding: 16px;
+}
+
+.empty-label {
+  font-size: 12px;
+  color: #71717a;
+  font-style: italic;
+}
+
+/* Scrolled Area */
+.app-scroll {
+  min-height: 60px;
+  max-height: 200px;
+}
+
+.app-scroll undershoot,
+.app-scroll overshoot {
+  background: none;
+}

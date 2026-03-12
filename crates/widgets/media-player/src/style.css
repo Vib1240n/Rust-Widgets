@@ -1,0 +1,202 @@
+/* ===========================================================
+ * rw-media - Media Player Widget Theme (Figma Design)
+ * =========================================================== */
+
+window,
+window.background {
+  background-color: transparent;
+  background: transparent;
+}
+
+.background {
+  background-color: transparent;
+}
+
+.media-player {
+  background-color: alpha(#18181b, 0.9);
+  border: 1px solid alpha(#3f3f46, 0.4);
+  border-radius: 12px;
+  padding: 0;
+  margin: 0;
+}
+
+.album-art-frame {
+  background-color: #27272a;
+  border-radius: 11px 11px 0 0;
+  min-height: 320px;
+  margin: 0;
+  padding: 0;
+}
+
+.album-art {
+  border-radius: 11px 11px 0 0;
+  margin: 0;
+  padding: 0;
+}
+
+.controls-container {
+  padding: 16px;
+  margin: 0;
+}
+
+.track-info {
+  margin-bottom: 8px;
+}
+
+.track-title {
+  color: #fafafa;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: monospace;
+}
+
+.track-artist {
+  color: #71717a;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.progress-section {
+  margin-bottom: 4px;
+}
+
+.progress-bar {
+  min-height: 4px;
+}
+
+.progress-bar trough {
+  background-color: alpha(#fafafa, 0.2);
+  border-radius: 2px;
+  min-height: 4px;
+}
+
+.progress-bar highlight {
+  background-color: #fafafa;
+  border-radius: 2px;
+}
+
+.progress-bar slider {
+  background-color: #fafafa;
+  border-radius: 50%;
+  min-width: 12px;
+  min-height: 12px;
+  margin: -4px;
+}
+
+.time-labels {
+  margin-top: 4px;
+}
+
+.time-position,
+.time-duration {
+  color: #52525b;
+  font-size: 10px;
+  font-family: monospace;
+}
+
+.playback-controls {
+  margin: 12px 0 8px 0;
+}
+
+.control-btn {
+  background-color: transparent;
+  border: none;
+  border-radius: 50%;
+  padding: 8px;
+  color: #71717a;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.control-btn:hover {
+  color: #fafafa;
+}
+
+.control-btn image {
+  -gtk-icon-size: 24px;
+}
+
+.play-btn {
+  background-color: #fafafa;
+  color: #18181b;
+  min-width: 56px;
+  min-height: 56px;
+}
+
+.play-btn:hover {
+  background-color: #e4e4e7;
+  color: #18181b;
+}
+
+.play-btn image {
+  -gtk-icon-size: 28px;
+}
+
+.volume-section {
+  margin-top: 8px;
+}
+
+.volume-icon {
+  color: #71717a;
+  -gtk-icon-size: 16px;
+  min-width: 24px;
+}
+
+.volume-slider {
+  margin: 0 8px;
+}
+
+.volume-slider trough {
+  background-color: alpha(#fafafa, 0.2);
+  border-radius: 3px;
+  min-height: 4px;
+}
+
+.volume-slider highlight {
+  background-color: alpha(#fafafa, 0.6);
+  border-radius: 3px;
+}
+
+.volume-slider slider {
+  background-color: #fafafa;
+  border-radius: 50%;
+  min-width: 12px;
+  min-height: 12px;
+  margin: -4px;
+}
+
+.volume-label {
+  color: #52525b;
+  font-size: 11px;
+  min-width: 36px;
+  font-family: monospace;
+}
+
+/* -- Player Selector Dots -- */
+.player-selector {
+  margin-bottom: 8px;
+}
+
+.player-dot {
+  background-color: alpha(#fafafa, 0.2);
+  border: none;
+  border-radius: 50%;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 6px;
+  color: #71717a;
+}
+
+.player-dot:hover {
+  background-color: alpha(#fafafa, 0.3);
+  color: #fafafa;
+}
+
+.player-dot.active {
+  background-color: alpha(#fafafa, 0.4);
+  color: #fafafa;
+}
+
+.player-dot image {
+  -gtk-icon-size: 16px;
+}

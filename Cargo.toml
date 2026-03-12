@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/widget-core",
+    "crates/widget-poll",
+    "crates/widgets/stats-popup",
+    "crates/widgets/control-center",
+    "crates/widgets/media-player",
+    "crates/widgets/volume-control",
+    "widget-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["vib1240n"]
+license = "MIT"
+
+[workspace.dependencies]
+gtk4 = "0.9"
+gtk4-layer-shell = "0.4"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+clap = { version = "4", features = ["derive"] }
+sysinfo = "0.32"
+directories = "5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }

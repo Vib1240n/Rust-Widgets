@@ -104,7 +104,7 @@ fn get_widget_pid(binary: &str) -> Option<u32> {
         for entry in entries.flatten() {
             let name = entry.file_name();
             let name_str = name.to_string_lossy();
-            
+
             // Only check numeric directories (PIDs)
             if let Ok(pid) = name_str.parse::<u32>() {
                 let comm_path = entry.path().join("comm");

@@ -35,18 +35,18 @@ fn main() {
 /// Check if another instance of this widget is already running
 fn is_already_running() -> bool {
     let my_pid = std::process::id();
-    
+
     if let Ok(entries) = std::fs::read_dir("/proc") {
         for entry in entries.flatten() {
             let name = entry.file_name();
             let name_str = name.to_string_lossy();
-            
+
             if let Ok(pid) = name_str.parse::<u32>() {
                 // Skip our own process
                 if pid == my_pid {
                     continue;
                 }
-                
+
                 let comm_path = entry.path().join("comm");
                 if let Ok(comm) = std::fs::read_to_string(&comm_path) {
                     if comm.trim() == BINARY_NAME {

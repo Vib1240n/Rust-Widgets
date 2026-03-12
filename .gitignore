@@ -1,2 +1,6 @@
 context-file.md
 *target*
+context-file.md
+*target*
+release/
+*.tar.gz

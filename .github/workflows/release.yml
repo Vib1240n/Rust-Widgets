@@ -1,36 +1,32 @@
-name: Build and Release
-
+name: Release
 on:
   push:
-    branches: [master, main]
-  workflow_dispatch:
-
+    tags:
+      - "v*"
+permissions:
+  contents: write
 env:
   CARGO_TERM_COLOR: always
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
-    runs-on: ubuntu-latest
-
+    name: Build Release
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libgtk-4-dev \
-            libadwaita-1-dev \
-            libgtk4-layer-shell-dev \
-            libpulse-dev \
-            pkg-config \
-            build-essential
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
+          sudo apt-get install -y libgtk-4-dev meson ninja-build libgirepository1.0-dev gobject-introspection
+      - name: Build gtk4-layer-shell
+        run: |
+          git clone https://github.com/wmww/gtk4-layer-shell.git
+          cd gtk4-layer-shell
+          meson setup build -Dvapi=false
+          ninja -C build
+          sudo ninja -C build install
+          sudo ldconfig
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -41,112 +37,29 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Build release
+      - name: Build release binaries
         run: cargo build --release
-
-      - name: Prepare release artifacts
+      - name: Rename binaries with arch suffix
         run: |
-          mkdir -p release/bin
-          mkdir -p release/themes
-          mkdir -p release/config
-
-          # Copy binaries
-          cp target/release/rw release/bin/ 2>/dev/null || true
-          cp target/release/rw-stats release/bin/ 2>/dev/null || true
-          cp target/release/rw-control release/bin/ 2>/dev/null || true
-          cp target/release/rw-media release/bin/ 2>/dev/null || true
-          cp target/release/rw-volume release/bin/ 2>/dev/null || true
-
-          # Copy themes
-          cp themes/*.css release/themes/ 2>/dev/null || true
-
-          # Copy install script
-          cp install-local.sh release/
-          chmod +x release/install-local.sh
-
-          # Create tarball
-          cd release
-          tar -czvf ../rust-widgets-x86_64-linux.tar.gz .
-          cd ..
-
-      - name: Generate release tag
-        id: tag
+          mv target/release/rw target/release/rw-x86_64-linux
+          mv target/release/rw-stats target/release/rw-stats-x86_64-linux
+          mv target/release/rw-control target/release/rw-control-x86_64-linux
+          mv target/release/rw-media target/release/rw-media-x86_64-linux
+          mv target/release/rw-volume target/release/rw-volume-x86_64-linux
+      - name: Generate checksums
         run: |
-          # Use date-based versioning: v0.1.0-YYYYMMDD.HHMM
-          TAG="v0.1.0-$(date +'%Y%m%d.%H%M')"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "Generated tag: $TAG"
-
-      - name: Delete existing latest release
-        uses: dev-drprasad/delete-tag-and-release@v1.1
-        with:
-          tag_name: latest
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          delete_release: true
-        continue-on-error: true
-
+          cd target/release
+          sha256sum rw-x86_64-linux rw-stats-x86_64-linux rw-control-x86_64-linux rw-media-x86_64-linux rw-volume-x86_64-linux > checksums.txt
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag.outputs.tag }}
-          name: "Release ${{ steps.tag.outputs.tag }}"
-          body: |
-            ## Rust Widgets Release
-
-            **Commit:** ${{ github.sha }}
-            **Branch:** ${{ github.ref_name }}
-            **Built:** ${{ steps.tag.outputs.tag }}
-
-            ### Installation
-
-            ```bash
-            # Download and extract
-            tar -xzf rust-widgets-x86_64-linux.tar.gz
-
-            # Run install script
-            ./install-local.sh
-            ```
-
-            Or manually copy binaries to `~/.local/bin/`
-
-            ### Included Binaries
-            - `rw` - CLI launcher
-            - `rw-stats` - System stats popup
-            - `rw-control` - Control center
-            - `rw-media` - Media player widget
-            - `rw-volume` - Volume control widget
+          generate_release_notes: true
           files: |
-            rust-widgets-x86_64-linux.tar.gz
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update latest tag
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: "Latest Release"
-          body: |
-            ## Latest Build
-
-            This is always the most recent build from the master branch.
-
-            **Commit:** ${{ github.sha }}
-            **Built:** ${{ steps.tag.outputs.tag }}
-
-            ### Quick Install
-
-            ```bash
-            curl -L https://github.com/${{ github.repository }}/releases/download/latest/rust-widgets-x86_64-linux.tar.gz | tar -xz
-            ./install-local.sh
-            ```
-          files: |
-            rust-widgets-x86_64-linux.tar.gz
-          draft: false
-          prerelease: false
+            target/release/rw-x86_64-linux
+            target/release/rw-stats-x86_64-linux
+            target/release/rw-control-x86_64-linux
+            target/release/rw-media-x86_64-linux
+            target/release/rw-volume-x86_64-linux
+            target/release/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

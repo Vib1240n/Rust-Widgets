@@ -1,4 +1,6 @@
 use clap::{Parser, Subcommand};
+use std::io::Write;
+use std::os::unix::net::UnixStream;
 use std::process::{Command, Stdio};
 
 #[derive(Parser)]
@@ -58,13 +60,41 @@ fn get_binary_name(widget: &str) -> Option<&'static str> {
         "stats" | "stats-popup" => Some("rw-stats"),
         "media" | "media-player" | "player" => Some("rw-media"),
         "control" | "control-center" | "cc" => Some("rw-control"),
-        "volume" | "volume-osd" => Some("rw-volume"),
+        "volume" | "volume-control" => Some("rw-volume"),
+        "volume-osd" | "osd" => Some("rw-volume-osd"),
+        "notifications" | "notification-center" | "nc" => Some("rw-notifications"),
         "brightness" | "brightness-osd" => Some("rw-brightness"),
         "power" | "power-menu" => Some("rw-power"),
         "calendar" => Some("rw-calendar"),
         _ => None,
     }
 }
+
+/// Check if widget is a daemon that uses socket IPC
+fn is_daemon_widget(widget: &str) -> bool {
+    matches!(widget, "notifications" | "notification-center" | "nc")
+}
+
+/// Get socket path for daemon widgets
+fn get_socket_path(widget: &str) -> Option<&'static str> {
+    match widget {
+        "notifications" | "notification-center" | "nc" => Some("/tmp/rw-notifications.sock"),
+        _ => None,
+    }
+}
+
+/// Send command to daemon via socket
+fn send_daemon_command(socket_path: &str, command: &str) -> Result<(), String> {
+    let mut stream = UnixStream::connect(socket_path)
+        .map_err(|e| format!("Failed to connect to daemon: {}", e))?;
+
+    stream
+        .write_all(command.as_bytes())
+        .map_err(|e| format!("Failed to send command: {}", e))?;
+
+    Ok(())
+}
+
 fn is_widget_running(binary: &str) -> bool {
     get_widget_pid(binary).is_some()
 }
@@ -76,11 +106,32 @@ fn show_widget(widget: &str) {
         std::process::exit(1);
     };
 
+    // Handle daemon widgets
+    if is_daemon_widget(widget) {
+        if let Some(socket) = get_socket_path(widget) {
+            if is_widget_running(binary) {
+                // Daemon running, send show command
+                match send_daemon_command(socket, "show\n") {
+                    Ok(_) => println!("Showing {}", widget),
+                    Err(e) => eprintln!("{}", e),
+                }
+            } else {
+                // Start daemon
+                start_widget(binary, widget);
+            }
+        }
+        return;
+    }
+
     if is_widget_running(binary) {
         println!("{} is already running", widget);
         return;
     }
 
+    start_widget(binary, widget);
+}
+
+fn start_widget(binary: &str, widget: &str) {
     // Use setsid to fully detach the process
     match Command::new("setsid")
         .arg("-f")
@@ -100,6 +151,13 @@ fn show_widget(widget: &str) {
 
 fn get_widget_pid(binary: &str) -> Option<u32> {
     // Find the PID of a running widget by checking /proc
+    // Note: /proc/*/comm truncates to 15 characters, so we need to handle that
+    let truncated_name = if binary.len() > 15 {
+        &binary[..15]
+    } else {
+        binary
+    };
+
     if let Ok(entries) = std::fs::read_dir("/proc") {
         for entry in entries.flatten() {
             let name = entry.file_name();
@@ -109,7 +167,9 @@ fn get_widget_pid(binary: &str) -> Option<u32> {
             if let Ok(pid) = name_str.parse::<u32>() {
                 let comm_path = entry.path().join("comm");
                 if let Ok(comm) = std::fs::read_to_string(&comm_path) {
-                    if comm.trim() == binary {
+                    let comm_trimmed = comm.trim();
+                    // Check both full name and truncated name
+                    if comm_trimmed == binary || comm_trimmed == truncated_name {
                         return Some(pid);
                     }
                 }
@@ -124,6 +184,21 @@ fn hide_widget(widget: &str) {
         eprintln!("Unknown widget: {}", widget);
         std::process::exit(1);
     };
+
+    // Handle daemon widgets
+    if is_daemon_widget(widget) {
+        if let Some(socket) = get_socket_path(widget) {
+            if is_widget_running(binary) {
+                match send_daemon_command(socket, "hide\n") {
+                    Ok(_) => println!("Hiding {}", widget),
+                    Err(e) => eprintln!("{}", e),
+                }
+            } else {
+                println!("{} daemon is not running", widget);
+            }
+        }
+        return;
+    }
 
     match get_widget_pid(binary) {
         Some(pid) => {
@@ -154,6 +229,23 @@ fn toggle_widget(widget: &str) {
         std::process::exit(1);
     };
 
+    // Handle daemon widgets
+    if is_daemon_widget(widget) {
+        if let Some(socket) = get_socket_path(widget) {
+            if is_widget_running(binary) {
+                // Daemon running, send toggle command
+                match send_daemon_command(socket, "toggle\n") {
+                    Ok(_) => println!("Toggled {}", widget),
+                    Err(e) => eprintln!("{}", e),
+                }
+            } else {
+                // Start daemon
+                start_widget(binary, widget);
+            }
+        }
+        return;
+    }
+
     if is_widget_running(binary) {
         hide_widget(widget);
     } else {
@@ -176,7 +268,18 @@ fn list_widgets() {
             "rw-control",
             "Control center (toggles, sliders, media, stats)",
         ),
-        ("volume", "rw-volume", "Volume OSD [not implemented]"),
+        ("volume", "rw-volume", "Volume control with app mixer"),
+        ("volume-osd", "rw-volume-osd", "Volume OSD (daemon)"),
+        (
+            "notifications",
+            "rw-notifications",
+            "Notification center (daemon, replaces swaync)",
+        ),
+        (
+            "media",
+            "rw-media",
+            "Media player with album art and controls",
+        ),
         (
             "brightness",
             "rw-brightness",
@@ -188,11 +291,6 @@ fn list_widgets() {
             "rw-calendar",
             "Calendar popup [not implemented]",
         ),
-        (
-            "media",
-            "rw-media",
-            "Media player with album art and controls",
-        ),
     ];
 
     for (name, binary, desc) in widgets {
@@ -201,9 +299,10 @@ fn list_widgets() {
         } else {
             ""
         };
-        println!("  {:<12} - {} {}", name, desc, status);
+        println!("  {:<14} - {} {}", name, desc, status);
     }
 }
+
 fn print_stats() {
     use widget_poll::Poller;
 
@@ -259,6 +358,9 @@ fn reload_config() {
         "rw-stats",
         "rw-control",
         "rw-volume",
+        "rw-media",
+        "rw-volume-osd",
+        "rw-notifications",
         "rw-brightness",
         "rw-power",
         "rw-calendar",
@@ -286,14 +388,23 @@ fn show_config_path(widget: Option<String>) {
         Some(w) => {
             let widget_dir = base.join(&w);
             println!("Config: {}/config.toml", widget_dir.display());
-            println!("Style:  {}/style.css", widget_dir.display());
+            println!(
+                "Style:  {}/style.css (deprecated, use {}/style.css)",
+                widget_dir.display(),
+                base.display()
+            );
         }
         None => {
             println!("Config directory: {}", base.display());
+            println!("Global style:     {}/style.css", base.display());
             println!();
             println!("Widget configs:");
             println!("  {}/stats-popup/config.toml", base.display());
             println!("  {}/control-center/config.toml", base.display());
+            println!("  {}/volume-control/config.toml", base.display());
+            println!("  {}/volume-osd/config.toml", base.display());
+            println!("  {}/notification-center/config.toml", base.display());
+            println!("  {}/media-player/config.toml", base.display());
         }
     }
 }

@@ -7,6 +7,8 @@ members = [
     "crates/widgets/control-center",
     "crates/widgets/media-player",
     "crates/widgets/volume-control",
+    "crates/widgets/volume-osd",
+    "crates/widgets/notification-center",
     "widget-cli",
 ]
 

@@ -61,6 +61,10 @@ fn is_already_running() -> bool {
 fn build_ui(app: &Application) {
     let config = Rc::new(Config::load());
     css::load();
+    
+    // Initialize volume persistence and watcher at startup
+    // This protects against volume spikes from the very beginning
+    audio::init_volume_persistence();
 
     let window = ApplicationWindow::builder()
         .application(app)
@@ -76,7 +80,7 @@ fn build_ui(app: &Application) {
 
     // Main container
     let container = Box::new(Orientation::Vertical, 0);
-    container.add_css_class("volume-control");
+    container.add_css_class("widget-container");
     container.set_width_request(config.appearance.width);
 
     // ===== OUTPUT SECTION =====
@@ -219,8 +223,10 @@ fn create_device_selector(is_output: bool, device_name_max_chars: usize) -> Box 
 
     // Find current default
     let current_device = devices.iter().find(|d| d.is_default).cloned();
+
+    // FIX: Use description (human-readable) instead of name (internal/MAC address)
     let current_name = current_device
-        .map(|d| d.name.clone())
+        .map(|d| d.description.clone())
         .unwrap_or_else(|| "No device".to_string());
 
     // Main button showing current device
@@ -274,7 +280,8 @@ fn create_device_selector(is_output: bool, device_name_max_chars: usize) -> Box 
         row_icon.add_css_class("device-icon");
         row_box.append(&row_icon);
 
-        let row_name = Label::new(Some(&device.name));
+        // FIX: Use description (human-readable) instead of name (internal/MAC address)
+        let row_name = Label::new(Some(&device.description));
         row_name.add_css_class("device-name");
         row_name.set_hexpand(true);
         row_name.set_halign(gtk4::Align::Start);

@@ -77,7 +77,7 @@ fn build_ui(app: &Application) {
 
     // Main container
     let container = Box::new(Orientation::Vertical, 0);
-    container.add_css_class("stats-container");
+    container.add_css_class("widget-container");
     container.set_width_request(config.appearance.width);
 
     // Create labels

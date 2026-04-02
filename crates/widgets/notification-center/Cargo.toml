@@ -1,0 +1,23 @@
+[package]
+name = "notification-center"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "rw-notifications"
+path = "src/main.rs"
+
+[dependencies]
+gtk4.workspace = true
+gtk4-layer-shell.workspace = true
+tokio.workspace = true
+serde.workspace = true
+toml.workspace = true
+directories.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+zbus = "5"
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "5"

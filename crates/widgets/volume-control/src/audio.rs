@@ -1,4 +1,17 @@
-use std::process::Command;
+use std::collections::HashMap;
+use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
+use std::sync::{LazyLock, Mutex};
+use std::thread;
+
+// Global storage for saved app volumes - persists across stream recreation
+// Key: application.process.binary (e.g., "zen-browser", "firefox", "discord")
+// Value: volume as f32 (0.0 - 1.5)
+static SAVED_APP_VOLUMES: LazyLock<Mutex<HashMap<String, f32>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+// Flag to track if the subscriber thread is running
+static SUBSCRIBER_RUNNING: LazyLock<Mutex<bool>> = LazyLock::new(|| Mutex::new(false));
 
 #[derive(Debug, Clone)]
 pub struct AudioDevice {
@@ -15,9 +28,83 @@ pub struct AudioStream {
     pub id: u32,
     pub name: String,
     pub app_name: String,
+    pub app_binary: String, // application.process.binary for tracking
     pub icon_name: String,
     pub volume: f32,
     pub muted: bool,
+}
+
+/// Start the background subscriber that watches for new audio streams
+/// and instantly reapplies saved volumes (prevents the 100% spike)
+pub fn start_volume_watcher() {
+    let mut running = SUBSCRIBER_RUNNING.lock().unwrap();
+    if *running {
+        return; // Already running
+    }
+    *running = true;
+    drop(running);
+
+    thread::spawn(|| {
+        // Start pactl subscribe to watch for new sink-inputs
+        let mut child = match Command::new("pactl")
+            .args(["subscribe"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+        {
+            Ok(c) => c,
+            Err(_) => {
+                *SUBSCRIBER_RUNNING.lock().unwrap() = false;
+                return;
+            }
+        };
+
+        let stdout = match child.stdout.take() {
+            Some(s) => s,
+            None => {
+                *SUBSCRIBER_RUNNING.lock().unwrap() = false;
+                return;
+            }
+        };
+
+        let reader = BufReader::new(stdout);
+
+        for line in reader.lines().flatten() {
+            // Parse lines like: "Event 'new' on sink-input #42"
+            if line.contains("sink-input") && line.contains("'new'") {
+                // New sink-input appeared - immediately check and reapply saved volumes
+                reapply_saved_volumes();
+            }
+        }
+
+        *SUBSCRIBER_RUNNING.lock().unwrap() = false;
+    });
+}
+
+/// Immediately reapply saved volumes to all matching streams
+fn reapply_saved_volumes() {
+    let saved = SAVED_APP_VOLUMES.lock().unwrap().clone();
+    if saved.is_empty() {
+        return;
+    }
+
+    // Small delay to let PipeWire/PulseAudio fully register the new stream
+    // This prevents the brief 100% spike by ensuring we set volume after
+    // the stream is fully initialized
+    std::thread::sleep(std::time::Duration::from_millis(5));
+
+    // Get current streams
+    let streams = get_streams_pactl_internal();
+
+    for stream in streams {
+        if !stream.app_binary.is_empty() {
+            if let Some(&saved_vol) = saved.get(&stream.app_binary) {
+                // Always reapply on new stream event - don't check current volume
+                // because the stream might report wrong volume briefly
+                set_stream_volume_internal(stream.id, saved_vol);
+            }
+        }
+    }
 }
 
 // Get master output (sink) volume
@@ -146,7 +233,7 @@ fn get_devices_pactl(list_type: &str, default_type: &str) -> Vec<AudioDevice> {
 
             // Start of a new sink/source block
             // Format: "Sink #47" or "Source #52"
-            if (line_trimmed.starts_with("Sink #") || line_trimmed.starts_with("Source #")) {
+            if line_trimmed.starts_with("Sink #") || line_trimmed.starts_with("Source #") {
                 // Save previous device if exists
                 if let Some(device) = current_device.take() {
                     // Filter out monitor devices for sinks
@@ -256,10 +343,10 @@ fn move_streams_to_sink(sink_name: &str) {
 
 // Get all audio streams (apps playing audio)
 pub fn get_streams() -> Vec<AudioStream> {
-    get_streams_pactl()
+    get_streams_pactl_internal()
 }
 
-fn get_streams_pactl() -> Vec<AudioStream> {
+fn get_streams_pactl_internal() -> Vec<AudioStream> {
     let output = Command::new("pactl")
         .args(["list", "sink-inputs"])
         .output()
@@ -277,7 +364,7 @@ fn get_streams_pactl() -> Vec<AudioStream> {
             if line.starts_with("Sink Input #") {
                 // Save previous stream if exists
                 if let Some(stream) = current_stream.take() {
-                    if !stream.app_name.is_empty() {
+                    if !stream.app_name.is_empty() || !stream.app_binary.is_empty() {
                         streams.push(stream);
                     }
                 }
@@ -291,6 +378,7 @@ fn get_streams_pactl() -> Vec<AudioStream> {
                     id,
                     name: String::new(),
                     app_name: String::new(),
+                    app_binary: String::new(),
                     icon_name: "audio-x-generic-symbolic".to_string(),
                     volume: 1.0,
                     muted: false,
@@ -299,6 +387,13 @@ fn get_streams_pactl() -> Vec<AudioStream> {
                 if line.starts_with("application.name = ") {
                     stream.app_name = line
                         .strip_prefix("application.name = ")
+                        .unwrap_or("")
+                        .trim_matches('"')
+                        .to_string();
+                } else if line.starts_with("application.process.binary = ") {
+                    // KEY: This is what we use to track apps across stream recreation
+                    stream.app_binary = line
+                        .strip_prefix("application.process.binary = ")
                         .unwrap_or("")
                         .trim_matches('"')
                         .to_string();
@@ -332,7 +427,7 @@ fn get_streams_pactl() -> Vec<AudioStream> {
 
         // Don't forget the last stream
         if let Some(stream) = current_stream {
-            if !stream.app_name.is_empty() {
+            if !stream.app_name.is_empty() || !stream.app_binary.is_empty() {
                 streams.push(stream);
             }
         }
@@ -341,8 +436,8 @@ fn get_streams_pactl() -> Vec<AudioStream> {
     streams
 }
 
-// Set stream volume
-pub fn set_stream_volume(id: u32, vol: f32) {
+// Internal function to set volume without saving (used for reapplying saved volumes)
+fn set_stream_volume_internal(id: u32, vol: f32) {
     let pct = (vol * 100.0) as u32;
     let _ = Command::new("pactl")
         .args([
@@ -350,14 +445,33 @@ pub fn set_stream_volume(id: u32, vol: f32) {
             &id.to_string(),
             &format!("{}%", pct),
         ])
-        .spawn();
+        .status(); // Use status() to wait for completion
+}
+
+// Set stream volume - NOW SAVES BY APP BINARY for persistence
+pub fn set_stream_volume(id: u32, vol: f32) {
+    // First, find the stream to get its app_binary
+    let streams = get_streams_pactl_internal();
+    if let Some(stream) = streams.iter().find(|s| s.id == id) {
+        // Save volume by app binary name (not by stream ID!)
+        if !stream.app_binary.is_empty() {
+            let mut saved = SAVED_APP_VOLUMES.lock().unwrap();
+            saved.insert(stream.app_binary.clone(), vol);
+        }
+    }
+
+    // Apply the volume
+    set_stream_volume_internal(id, vol);
+
+    // Make sure the watcher is running
+    start_volume_watcher();
 }
 
 // Toggle stream mute
 pub fn toggle_stream_mute(id: u32) {
     let _ = Command::new("pactl")
         .args(["set-sink-input-mute", &id.to_string(), "toggle"])
-        .spawn();
+        .status(); // Use status() to wait for completion
 }
 
 // Get appropriate icon for app
@@ -366,7 +480,7 @@ pub fn get_app_icon(app_name: &str) -> &'static str {
 
     if lower.contains("spotify") {
         "emblem-music-symbolic"
-    } else if lower.contains("firefox") {
+    } else if lower.contains("firefox") || lower.contains("zen") {
         "firefox-symbolic"
     } else if lower.contains("chrom") {
         "web-browser-symbolic"
@@ -379,4 +493,35 @@ pub fn get_app_icon(app_name: &str) -> &'static str {
     } else {
         "audio-x-generic-symbolic"
     }
+}
+
+// Clear saved volume for an app (useful if user wants to reset)
+pub fn clear_saved_volume(app_binary: &str) {
+    let mut saved = SAVED_APP_VOLUMES.lock().unwrap();
+    saved.remove(app_binary);
+}
+
+// Get all saved volumes (for debugging or UI display)
+pub fn get_saved_volumes() -> HashMap<String, f32> {
+    SAVED_APP_VOLUMES.lock().unwrap().clone()
+}
+
+/// Initialize the volume watcher and load current stream volumes into memory.
+/// Call this once at widget startup to protect against volume spikes from the beginning.
+pub fn init_volume_persistence() {
+    // Load current stream volumes into saved volumes map
+    // This ensures we remember volumes even if widget was restarted
+    let streams = get_streams_pactl_internal();
+    let mut saved = SAVED_APP_VOLUMES.lock().unwrap();
+    
+    for stream in streams {
+        if !stream.app_binary.is_empty() {
+            // Only save if we don't already have a saved value for this app
+            saved.entry(stream.app_binary).or_insert(stream.volume);
+        }
+    }
+    drop(saved);
+    
+    // Start the watcher thread
+    start_volume_watcher();
 }

@@ -141,7 +141,7 @@ fn build_ui(app: &Application) {
 
     // Main container
     let container = Box::new(Orientation::Vertical, 0);
-    container.add_css_class("media-player");
+    container.add_css_class("widget-container");
     container.set_width_request(config.appearance.width);
 
     // Album art
@@ -359,7 +359,6 @@ fn build_ui(app: &Application) {
 
     // Poll for updates
     let poll_interval = config.behavior.poll_interval;
-    let last_art_url = Rc::new(RefCell::new(String::new()));
 
     glib::timeout_add_local(Duration::from_millis(poll_interval), move || {
         // Refresh player list

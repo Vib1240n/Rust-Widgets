@@ -1,0 +1,18 @@
+[package]
+name = "volume-osd"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rw-volume-osd"
+path = "src/main.rs"
+
+[dependencies]
+gtk4 = { version = "0.9", features = ["v4_12"] }
+gtk4-layer-shell = "0.4"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "net", "io-util", "macros", "time"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dirs = "5"
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"

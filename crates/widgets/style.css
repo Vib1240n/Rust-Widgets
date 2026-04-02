@@ -1,0 +1,1185 @@
+/* ===========================================================================
+ * rust-widgets - User Style Override
+ * Location: ~/.config/rw/style.css
+ * ===========================================================================*/
+
+
+/* ===========================================================================
+ * CRITICAL: Window Transparency for Hyprland Blur
+ * These rules ensure the GTK window is fully transparent so Hyprland
+ * can apply blur to the semi-transparent container inside.
+ * ===========================================================================*/
+window,
+window.background,
+.background,
+headerbar,
+decoration,
+windowhandle {
+  background-color: transparent;
+  background-image: none;
+  box-shadow: none;
+  border: none;
+}
+
+/* Force transparency on all window-level elements */
+window > * {
+  background-color: transparent;
+}
+
+
+/* ===========================================================================
+ * Widget Containers - Semi-transparent for blur effect
+ * ===========================================================================*/
+.widget-container {
+  background-color: alpha(#141618, 0.65);
+  border: 1px solid alpha(#57595c, 0.3);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.popup-container {
+  background-color: alpha(#141618, 0.75);
+  border: 1px solid alpha(#57595c, 0.3);
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 8px 32px alpha(#000, 0.4);
+}
+
+
+/* ===========================================================================
+ * COMMON - Typography
+ * ===========================================================================*/
+separator {
+  background: alpha(#57595c, 0.25);
+  min-height: 1px;
+  margin: 12px 0;
+}
+
+.section-title {
+  color: alpha(#3daee9, 0.8);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.section-title:first-child {
+  margin-top: 0;
+}
+
+
+/* ===========================================================================
+ * COMMON - Progress Bars
+ * ===========================================================================*/
+progressbar {
+  min-height: 6px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+progressbar trough {
+  background-color: alpha(#292c30, 0.6);
+  border-radius: 3px;
+  min-height: 6px;
+}
+
+progressbar progress {
+  background-color: #3daee9;
+  border-radius: 3px;
+  min-height: 6px;
+}
+
+progressbar.warning progress {
+  background-color: #f7c843;
+}
+
+progressbar.critical progress {
+  background-color: #ed8796;
+}
+
+
+/* ===========================================================================
+ * COMMON - Sliders / Scales
+ * ===========================================================================*/
+scale trough {
+  background: alpha(#292c30, 0.6);
+  border-radius: 6px;
+  min-height: 6px;
+}
+
+scale highlight {
+  background: #3daee9;
+  border-radius: 6px;
+}
+
+scale slider {
+  background: #fcfcfc;
+  border-radius: 50%;
+  min-width: 16px;
+  min-height: 16px;
+  margin: -5px;
+  box-shadow: 0 2px 4px alpha(#000, 0.3);
+}
+
+scale slider:hover {
+  background: #ffffff;
+}
+
+scale.muted highlight {
+  background: alpha(#fcfcfc, 0.25);
+}
+
+
+/* ===========================================================================
+ * COMMON - Buttons
+ * ===========================================================================*/
+button {
+  background: alpha(#292c30, 0.5);
+  border: none;
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: alpha(#fcfcfc, 0.55);
+  transition: all 150ms ease;
+}
+
+button:hover {
+  background: alpha(#3daee9, 0.25);
+  color: #fcfcfc;
+}
+
+button.flat {
+  background: transparent;
+}
+
+button.flat:hover {
+  background: alpha(#3daee9, 0.2);
+}
+
+button.circular {
+  border-radius: 50%;
+  padding: 8px;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+button.destructive-action {
+  background: alpha(#ed8796, 0.2);
+  color: #ed8796;
+}
+
+button.destructive-action:hover {
+  background: alpha(#ed8796, 0.3);
+}
+
+
+/* ===========================================================================
+ * COMMON - Switches
+ * ===========================================================================*/
+switch {
+  background: alpha(#292c30, 0.6);
+  border-radius: 12px;
+  min-width: 48px;
+  min-height: 24px;
+}
+
+switch:checked {
+  background: #3daee9;
+}
+
+switch slider {
+  background: #fcfcfc;
+  border-radius: 50%;
+  min-width: 20px;
+  min-height: 20px;
+  margin: 2px;
+}
+
+
+/* ===========================================================================
+ * COMMON - Empty State & Urgency
+ * ===========================================================================*/
+.empty-state {
+  padding: 16px;
+}
+
+.empty-label {
+  font-size: 12px;
+  color: alpha(#fcfcfc, 0.35);
+  font-style: italic;
+}
+
+.urgency-low {
+  opacity: 0.85;
+}
+
+.urgency-critical {
+  border-color: #ed8796;
+  background-color: alpha(#281c1e, 0.75);
+}
+
+
+/* ===========================================================================
+ * STATS-POPUP
+ * ===========================================================================*/
+.stat-row {
+  margin: 4px 0;
+}
+
+.stat-label {
+  color: alpha(#fcfcfc, 0.55);
+  font-size: 12px;
+  min-width: 80px;
+}
+
+.stat-value {
+  color: #fcfcfc;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.stat-item {
+  padding: 8px 12px;
+  background: alpha(#292c30, 0.4);
+  border-radius: 12px;
+}
+
+.stat-icon {
+  font-size: 14px;
+  color: #3daee9;
+  margin-right: 6px;
+}
+
+.temp-label {
+  color: alpha(#fcfcfc, 0.55);
+  font-size: 11px;
+}
+
+.temp-value {
+  color: #fcfcfc;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.temp-warning {
+  color: #f7c843;
+}
+
+.temp-critical {
+  color: #ed8796;
+}
+
+
+/* ===========================================================================
+ * CONTROL-CENTER - Toggles
+ * ===========================================================================*/
+.toggles-section {
+  margin-bottom: 4px;
+}
+
+.toggle-grid {
+  margin: 4px 0;
+}
+
+.toggle-btn {
+  background: alpha(#292c30, 0.5);
+  border-radius: 16px;
+  padding: 12px;
+  min-width: 56px;
+  min-height: 56px;
+  border: none;
+  transition: all 200ms ease;
+}
+
+.toggle-btn:hover {
+  background: alpha(#3daee9, 0.25);
+}
+
+.toggle-btn.active {
+  background: #3daee9;
+}
+
+.toggle-btn.active label {
+  color: #141618;
+}
+
+.toggle-btn box {
+  spacing: 4px;
+}
+
+.toggle-icon {
+  font-size: 20px;
+  color: #fcfcfc;
+}
+
+.toggle-btn.active .toggle-icon {
+  color: #141618;
+}
+
+.toggle-label {
+  font-size: 9px;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.toggle-btn.active .toggle-label {
+  color: #141618;
+}
+
+
+/* ===========================================================================
+ * CONTROL-CENTER - Sliders
+ * ===========================================================================*/
+.sliders-section {
+  margin: 4px 0;
+}
+
+.slider-row {
+  margin: 8px 0;
+}
+
+.slider-icon {
+  font-size: 18px;
+  color: alpha(#fcfcfc, 0.55);
+  min-width: 28px;
+}
+
+.slider-row scale {
+  margin: 0 8px;
+}
+
+.slider-row scale trough {
+  min-height: 8px;
+}
+
+.slider-row scale slider {
+  min-width: 18px;
+  min-height: 18px;
+}
+
+.slider-value {
+  font-size: 12px;
+  color: #fcfcfc;
+  min-width: 36px;
+}
+
+.output-selector {
+  background: alpha(#292c30, 0.5);
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin-top: 4px;
+  border: none;
+  color: alpha(#fcfcfc, 0.55);
+  font-size: 11px;
+}
+
+.output-selector:hover {
+  background: alpha(#292c30, 0.7);
+}
+
+
+/* ===========================================================================
+ * CONTROL-CENTER - Media Section
+ * ===========================================================================*/
+.media-section {
+  background: alpha(#292c30, 0.4);
+  border-radius: 16px;
+  padding: 12px;
+  margin: 4px 0;
+}
+
+.media-section.inactive {
+  opacity: 0.5;
+}
+
+.media-art {
+  border-radius: 8px;
+  min-width: 48px;
+  min-height: 48px;
+  background: alpha(#292c30, 0.6);
+}
+
+.media-info {
+  margin-left: 12px;
+}
+
+.media-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fcfcfc;
+}
+
+.media-artist {
+  font-size: 11px;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.media-controls {
+  margin-top: 8px;
+}
+
+.media-btn {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  border-radius: 50%;
+  color: #fcfcfc;
+}
+
+.media-btn:hover {
+  background: alpha(#3daee9, 0.25);
+}
+
+.media-btn.play {
+  background: #3daee9;
+  color: #141618;
+}
+
+.media-btn.play:hover {
+  background: alpha(#3daee9, 0.85);
+}
+
+
+/* ===========================================================================
+ * CONTROL-CENTER - Stats Section
+ * ===========================================================================*/
+.stats-section {
+  margin-top: 4px;
+}
+
+.stats-row {
+  margin: 2px 0;
+}
+
+
+/* ===========================================================================
+ * VOLUME-CONTROL
+ * ===========================================================================*/
+.device-selector {
+  margin-bottom: 12px;
+}
+
+.device-button {
+  background: alpha(#292c30, 0.5);
+  border-radius: 12px;
+  padding: 10px 14px;
+  border: none;
+  transition: all 200ms ease;
+}
+
+.device-button:hover {
+  background: alpha(#3daee9, 0.25);
+}
+
+.device-button.active {
+  background: alpha(#3daee9, 0.2);
+  border: 1px solid alpha(#3daee9, 0.4);
+}
+
+.device-icon {
+  color: alpha(#fcfcfc, 0.55);
+  margin-right: 8px;
+}
+
+.device-button.active .device-icon {
+  color: #3daee9;
+}
+
+.device-name {
+  font-size: 12px;
+  color: #fcfcfc;
+}
+
+.device-button.active .device-name {
+  color: #ffffff;
+}
+
+.device-check {
+  color: #3daee9;
+  margin-left: 8px;
+}
+
+.master-volume {
+  background: alpha(#292c30, 0.4);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.volume-row {
+  margin: 0;
+}
+
+.volume-icon {
+  color: alpha(#fcfcfc, 0.55);
+  min-width: 24px;
+}
+
+.volume-icon.muted {
+  color: #ed8796;
+}
+
+.mute-button {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 8px;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.mute-button:hover {
+  background: alpha(#3daee9, 0.2);
+}
+
+.mute-button.muted {
+  background: alpha(#ed8796, 0.2);
+}
+
+.mute-button.muted:hover {
+  background: alpha(#ed8796, 0.3);
+}
+
+.volume-slider {
+  margin: 0 12px;
+}
+
+.volume-slider trough {
+  min-height: 8px;
+}
+
+.volume-slider slider {
+  min-width: 18px;
+  min-height: 18px;
+}
+
+.volume-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fcfcfc;
+  min-width: 40px;
+}
+
+.volume-value.muted {
+  color: alpha(#fcfcfc, 0.35);
+}
+
+.section-separator {
+  background: alpha(#57595c, 0.25);
+  min-height: 1px;
+  margin: 12px 0;
+}
+
+.app-volumes {
+  margin-top: 4px;
+}
+
+.app-row {
+  background: alpha(#292c30, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+}
+
+.app-row:last-child {
+  margin-bottom: 0;
+}
+
+.app-icon {
+  color: alpha(#fcfcfc, 0.55);
+  min-width: 20px;
+  margin-right: 10px;
+}
+
+.app-info {
+  margin-right: 8px;
+}
+
+.app-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fcfcfc;
+}
+
+.app-stream {
+  font-size: 10px;
+  color: alpha(#fcfcfc, 0.35);
+}
+
+.app-slider trough {
+  min-height: 6px;
+}
+
+.app-slider slider {
+  min-width: 14px;
+  min-height: 14px;
+  margin: -4px;
+}
+
+.app-volume-value {
+  font-size: 11px;
+  color: alpha(#fcfcfc, 0.55);
+  min-width: 32px;
+}
+
+.app-mute-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 6px;
+  min-width: 28px;
+  min-height: 28px;
+  color: alpha(#fcfcfc, 0.35);
+}
+
+.app-mute-btn:hover {
+  background: alpha(#3daee9, 0.2);
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.app-mute-btn.muted {
+  color: #ed8796;
+}
+
+.input-section {
+  margin-top: 4px;
+}
+
+.input-volume {
+  background: alpha(#292c30, 0.35);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.input-icon {
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.input-icon.muted {
+  color: #ed8796;
+}
+
+.app-scroll {
+  min-height: 60px;
+  max-height: 200px;
+}
+
+.app-scroll undershoot,
+.app-scroll overshoot {
+  background: none;
+}
+
+
+/* ===========================================================================
+ * MEDIA-PLAYER
+ * ===========================================================================*/
+.album-art-frame {
+  background-color: alpha(#292c30, 0.6);
+  border-radius: 19px 19px 0 0;
+  min-height: 320px;
+  margin: 0;
+  padding: 0;
+}
+
+.album-art {
+  border-radius: 19px 19px 0 0;
+  margin: 0;
+  padding: 0;
+}
+
+.controls-container {
+  padding: 16px;
+  margin: 0;
+}
+
+.track-info {
+  margin-bottom: 8px;
+}
+
+.track-title {
+  color: #fcfcfc;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.track-artist {
+  color: alpha(#fcfcfc, 0.55);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.progress-section {
+  margin-bottom: 4px;
+}
+
+.progress-bar {
+  min-height: 4px;
+}
+
+.progress-bar trough {
+  background-color: alpha(#fcfcfc, 0.2);
+  border-radius: 2px;
+  min-height: 4px;
+}
+
+.progress-bar highlight {
+  background-color: #fcfcfc;
+  border-radius: 2px;
+}
+
+.progress-bar slider {
+  background-color: #fcfcfc;
+  border-radius: 50%;
+  min-width: 12px;
+  min-height: 12px;
+  margin: -4px;
+}
+
+.time-labels {
+  margin-top: 4px;
+}
+
+.time-position,
+.time-duration {
+  color: alpha(#fcfcfc, 0.35);
+  font-size: 10px;
+  font-family: monospace;
+}
+
+.playback-controls {
+  margin: 12px 0 8px 0;
+}
+
+.control-btn {
+  background-color: transparent;
+  border: none;
+  border-radius: 50%;
+  padding: 8px;
+  color: alpha(#fcfcfc, 0.55);
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.control-btn:hover {
+  color: #fcfcfc;
+}
+
+.control-btn image {
+  -gtk-icon-size: 24px;
+}
+
+.play-btn {
+  background-color: #fcfcfc;
+  color: #141618;
+  min-width: 56px;
+  min-height: 56px;
+}
+
+.play-btn:hover {
+  background-color: alpha(#fcfcfc, 0.9);
+  color: #141618;
+}
+
+.play-btn image {
+  -gtk-icon-size: 28px;
+}
+
+.volume-section {
+  margin-top: 8px;
+}
+
+.volume-section .volume-icon {
+  color: alpha(#fcfcfc, 0.55);
+  -gtk-icon-size: 16px;
+  min-width: 24px;
+}
+
+.volume-section .volume-slider trough {
+  background-color: alpha(#fcfcfc, 0.2);
+  min-height: 4px;
+}
+
+.volume-section .volume-slider highlight {
+  background-color: alpha(#fcfcfc, 0.6);
+}
+
+.volume-section .volume-slider slider {
+  min-width: 12px;
+  min-height: 12px;
+  margin: -4px;
+}
+
+.volume-label {
+  color: alpha(#fcfcfc, 0.35);
+  font-size: 11px;
+  min-width: 36px;
+  font-family: monospace;
+}
+
+.player-selector {
+  margin-bottom: 8px;
+}
+
+.player-dot {
+  background-color: alpha(#fcfcfc, 0.2);
+  border: none;
+  border-radius: 50%;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 6px;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.player-dot:hover {
+  background-color: alpha(#fcfcfc, 0.3);
+  color: #fcfcfc;
+}
+
+.player-dot.active {
+  background-color: alpha(#fcfcfc, 0.4);
+  color: #fcfcfc;
+}
+
+.player-dot image {
+  -gtk-icon-size: 16px;
+}
+
+
+/* ===========================================================================
+ * NOTIFICATION-CENTER - Popups
+ * ===========================================================================*/
+.popup-container.urgency-critical {
+  border-color: #ed8796;
+  background-color: alpha(#281c1e, 0.75);
+}
+
+.popup-header {
+  margin-bottom: 8px;
+}
+
+.popup-app-icon {
+  opacity: 0.8;
+}
+
+.popup-app-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.popup-close {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  padding: 4px;
+  min-width: 24px;
+  min-height: 24px;
+  color: alpha(#fcfcfc, 0.55);
+  transition: all 150ms ease;
+}
+
+.popup-close:hover {
+  background: alpha(#fcfcfc, 0.15);
+  color: #fcfcfc;
+}
+
+.popup-content {
+  margin-bottom: 8px;
+}
+
+.popup-image {
+  border-radius: 8px;
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.popup-summary {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fcfcfc;
+}
+
+.popup-body {
+  font-size: 12px;
+  color: alpha(#fcfcfc, 0.55);
+  line-height: 1.4;
+}
+
+.popup-progress {
+  margin-top: 8px;
+}
+
+.popup-progress trough {
+  min-height: 4px;
+}
+
+.popup-progress progress {
+  min-height: 4px;
+}
+
+.popup-actions {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid alpha(#57595c, 0.25);
+}
+
+.popup-action-btn {
+  background: alpha(#3daee9, 0.15);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #3daee9;
+}
+
+.popup-action-btn:hover {
+  background: alpha(#3daee9, 0.25);
+}
+
+
+/* ===========================================================================
+ * NOTIFICATION-CENTER - Panel
+ * ===========================================================================*/
+.nc-header {
+  margin-bottom: 12px;
+}
+
+.nc-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fcfcfc;
+}
+
+.nc-count {
+  background: #3daee9;
+  color: #141618;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.nc-dnd-row {
+  background: alpha(#292c30, 0.4);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.nc-dnd-icon {
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.nc-dnd-label {
+  font-size: 13px;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.nc-scroll {
+  background: transparent;
+}
+
+.nc-list {
+  background: transparent;
+}
+
+.nc-notification-row {
+  background: transparent;
+  border-radius: 12px;
+  margin: 4px 0;
+}
+
+.nc-notification-row:hover {
+  background: alpha(#292c30, 0.4);
+}
+
+.nc-notification-row.dismissed {
+  opacity: 0.6;
+}
+
+.nc-notification-row.urgency-low {
+  opacity: 0.85;
+}
+
+.nc-notification-row.urgency-critical {
+  background: alpha(#ed8796, 0.1);
+  border-left: 3px solid #ed8796;
+}
+
+.nc-notification {
+  padding: 12px;
+}
+
+.nc-app-icon {
+  border-radius: 8px;
+}
+
+.nc-app-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.nc-time {
+  font-size: 10px;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.nc-summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fcfcfc;
+}
+
+.nc-body {
+  font-size: 12px;
+  color: alpha(#fcfcfc, 0.55);
+  line-height: 1.4;
+}
+
+.nc-progress {
+  margin-top: 8px;
+}
+
+.nc-progress trough {
+  min-height: 4px;
+}
+
+.nc-progress progress {
+  min-height: 4px;
+}
+
+.nc-actions {
+  margin-top: 8px;
+}
+
+.nc-action-btn {
+  background: alpha(#292c30, 0.5);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.nc-action-btn:hover {
+  background: alpha(#3daee9, 0.2);
+  color: #3daee9;
+}
+
+.nc-dismiss-btn {
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  padding: 4px;
+  min-width: 24px;
+  min-height: 24px;
+  color: alpha(#fcfcfc, 0.55);
+  opacity: 0;
+  transition: all 150ms ease;
+}
+
+.nc-notification-row:hover .nc-dismiss-btn {
+  opacity: 1;
+}
+
+.nc-dismiss-btn:hover {
+  background: alpha(#ed8796, 0.2);
+  color: #ed8796;
+}
+
+.nc-empty {
+  padding: 32px;
+}
+
+.nc-empty-icon {
+  color: alpha(#fcfcfc, 0.55);
+  opacity: 0.5;
+}
+
+.nc-empty-label {
+  font-size: 14px;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.nc-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid alpha(#57595c, 0.25);
+}
+
+.nc-clear-btn {
+  background: alpha(#ed8796, 0.15);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #ed8796;
+}
+
+.nc-clear-btn:hover {
+  background: alpha(#ed8796, 0.25);
+}
+
+
+/* ===========================================================================
+ * VOLUME OSD / BRIGHTNESS OSD
+ * ===========================================================================*/
+.osd-container {
+  background-color: alpha(#141618, 0.75);
+  border: 1px solid alpha(#57595c, 0.3);
+  border-radius: 24px;
+  padding: 12px 20px;
+  min-width: 200px;
+}
+
+.osd-icon {
+  color: #fcfcfc;
+  opacity: 0.9;
+}
+
+.osd-icon.muted {
+  color: #ed8796;
+  opacity: 0.7;
+}
+
+.osd-scale {
+  margin: 0 4px;
+}
+
+.osd-scale trough {
+  background: alpha(#292c30, 0.8);
+  border-radius: 4px;
+  min-height: 8px;
+}
+
+.osd-scale highlight {
+  background: #3daee9;
+  border-radius: 4px;
+  min-height: 8px;
+}
+
+.osd-scale.muted highlight {
+  background: alpha(#ed8796, 0.6);
+}
+
+.osd-scale slider {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.osd-percent {
+  color: alpha(#fcfcfc, 0.7);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: monospace;
+}

@@ -1,4 +1,4 @@
-//! CSS loading for volume-control widget
+//! CSS loading for notification-center widget
 
 use gtk4::CssProvider;
 use std::path::PathBuf;
@@ -6,7 +6,7 @@ use std::path::PathBuf;
 /// Default CSS compiled into the binary
 const DEFAULT_STYLE: &str = include_str!("../../style.css");
 
-const WIDGET_NAME: &str = "volume-control";
+const WIDGET_NAME: &str = "notification-center";
 
 /// Load CSS for the widget
 pub fn load() {

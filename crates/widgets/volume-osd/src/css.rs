@@ -1,4 +1,4 @@
-//! CSS loading for volume-control widget
+//! CSS loading for volume-osd widget
 
 use gtk4::CssProvider;
 use std::path::PathBuf;
@@ -6,7 +6,7 @@ use std::path::PathBuf;
 /// Default CSS compiled into the binary
 const DEFAULT_STYLE: &str = include_str!("../../style.css");
 
-const WIDGET_NAME: &str = "volume-control";
+const WIDGET_NAME: &str = "volume-osd";
 
 /// Load CSS for the widget
 pub fn load() {
@@ -43,9 +43,6 @@ pub fn load() {
         );
         tracing::warn!(
             "Please migrate your custom styles to ~/.config/rw/style.css"
-        );
-        tracing::warn!(
-            "Per-widget style.css files will be ignored in future versions"
         );
     }
 }

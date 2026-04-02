@@ -1,4 +1,5 @@
 mod animation;
+mod bluetooth;
 mod config;
 mod css;
 mod media;
@@ -9,7 +10,9 @@ mod toggles;
 use config::Config;
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{Application, ApplicationWindow, Box, Orientation, Separator};
+use gtk4::{
+    Application, ApplicationWindow, Box, Orientation, Separator, Stack, StackTransitionType,
+};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -77,48 +80,88 @@ fn build_ui(app: &Application) {
     // Position from config
     apply_position(&window, &config);
 
-    // Main container
-    let container = Box::new(Orientation::Vertical, 0);
-    container.add_css_class("control-center");
-    container.set_width_request(config.appearance.width);
+    // Create a stack for view switching
+    let stack = Stack::new();
+    stack.set_transition_type(StackTransitionType::SlideLeftRight);
+    stack.set_transition_duration(200);
+
+    // Main control center view
+    let main_container = Box::new(Orientation::Vertical, 0);
+    main_container.add_css_class("widget-container");
+    main_container.set_width_request(config.appearance.width);
 
     // Quick toggles section
     if config.sections.toggles {
         let toggles_box = toggles::build(&config);
-        container.append(&toggles_box);
-        container.append(&Separator::new(Orientation::Horizontal));
+        main_container.append(&toggles_box);
+        main_container.append(&Separator::new(Orientation::Horizontal));
     }
 
     // Sliders section
     if config.sections.sliders {
         let sliders_box = sliders::build(&config);
-        container.append(&sliders_box);
-        container.append(&Separator::new(Orientation::Horizontal));
+        main_container.append(&sliders_box);
+        main_container.append(&Separator::new(Orientation::Horizontal));
     }
 
     // Media section
     if config.sections.media {
         let media_box = media::build();
-        container.append(&media_box);
-        container.append(&Separator::new(Orientation::Horizontal));
+        main_container.append(&media_box);
+        main_container.append(&Separator::new(Orientation::Horizontal));
     }
 
     // Quick stats section
     if config.sections.stats {
         let stats_box = stats::build();
-        container.append(&stats_box);
+        main_container.append(&stats_box);
     }
 
-    window.set_child(Some(&container));
+    stack.add_named(&main_container, Some("main"));
+
+    // Bluetooth panel view
+    let stack_clone = stack.clone();
+    let bluetooth_panel = bluetooth::BluetoothPanel::new(move || {
+        stack_clone.set_visible_child_name("main");
+    });
+
+    // Wrap bluetooth panel in a container with same styling
+    let bt_wrapper = Box::new(Orientation::Vertical, 0);
+    bt_wrapper.add_css_class("widget-container");
+    bt_wrapper.set_width_request(config.appearance.width);
+    bt_wrapper.append(&bluetooth_panel.container);
+
+    stack.add_named(&bt_wrapper, Some("bluetooth"));
+
+    // Setup bluetooth toggle callback
+    let stack_for_toggle = stack.clone();
+    let bt_panel = Rc::new(RefCell::new(bluetooth_panel));
+    let bt_panel_clone = bt_panel.clone();
+
+    toggles::set_bluetooth_callback(move || {
+        stack_for_toggle.set_visible_child_name("bluetooth");
+        bt_panel_clone.borrow().refresh();
+    });
+
+    window.set_child(Some(&stack));
 
     // Setup polling for dynamic content
     let config_clone = config.clone();
+    let bt_panel_poll = bt_panel.clone();
+    let stack_poll = stack.clone();
+
     glib::timeout_add_local(
         Duration::from_millis(config.behavior.poll_interval),
         move || {
             sliders::update(&config_clone);
             media::update();
             stats::update();
+
+            // Refresh bluetooth panel if visible
+            if stack_poll.visible_child_name().as_deref() == Some("bluetooth") {
+                bt_panel_poll.borrow().refresh();
+            }
+
             glib::ControlFlow::Continue
         },
     );
@@ -126,14 +169,23 @@ fn build_ui(app: &Application) {
     // Track if closing
     let is_closing = Rc::new(RefCell::new(false));
 
-    // Close on Escape
+    // Close on Escape (or go back if in subview)
     if config.behavior.close_on_escape {
         let controller = gtk4::EventControllerKey::new();
         let window_clone = window.clone();
         let is_closing_clone = is_closing.clone();
         let anim_config = config.animation.clone();
+        let stack_esc = stack.clone();
+
         controller.connect_key_pressed(move |_, key, _, _| {
             if key == gtk4::gdk::Key::Escape {
+                // If in bluetooth view, go back to main
+                if stack_esc.visible_child_name().as_deref() == Some("bluetooth") {
+                    stack_esc.set_visible_child_name("main");
+                    return glib::Propagation::Stop;
+                }
+
+                // Otherwise close the window
                 if !*is_closing_clone.borrow() {
                     *is_closing_clone.borrow_mut() = true;
                     close_with_animation(&window_clone, &anim_config);

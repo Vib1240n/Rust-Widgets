@@ -21,13 +21,15 @@ declare -A WIDGETS=(
     ["control"]="rw-control:control-center:control-center"
     ["media"]="rw-media:media-player:media-player"
     ["volume"]="rw-volume:volume-control:volume-control"
+    ["volume-osd"]="rw-volume-osd:volume-osd:volume-osd"
+    ["notifications"]="rw-notifications:notification-center:notification-center"
 )
 
 # Parse arguments
 SELECTED_WIDGETS=()
 if [ $# -eq 0 ]; then
     # No args = install all
-    SELECTED_WIDGETS=("stats" "control" "media" "volume")
+    SELECTED_WIDGETS=("stats" "control" "media" "volume" "volume-osd" "notifications")
     BUILD_ALL=true
 else
     for arg in "$@"; do
@@ -37,9 +39,11 @@ else
             control|control-center) SELECTED_WIDGETS+=("control") ;;
             media|media-player) SELECTED_WIDGETS+=("media") ;;
             volume|volume-control) SELECTED_WIDGETS+=("volume") ;;
+            volume-osd|osd) SELECTED_WIDGETS+=("volume-osd") ;;
+            notifications|notification-center|nc) SELECTED_WIDGETS+=("notifications") ;;
             *)
                 echo -e "${YELLOW}Unknown widget: $arg${NC}"
-                echo "Available: stats, control, media, volume"
+                echo "Available: stats, control, media, volume, volume-osd, notifications"
                 exit 1
                 ;;
         esac
@@ -222,6 +226,58 @@ duration = 250
 EOFCONFIG
                 echo -e "  ${GREEN}Created volume-control config${NC}"
                 ;;
+            volume-osd)
+                cat > "$HOME/.config/rw/$config_dir/config.toml" << 'EOFCONFIG'
+[position]
+anchor = "top-center"
+margin_top = 50
+
+[appearance]
+width = 200
+height = 48
+icon_size = 24
+show_percentage = true
+
+[behavior]
+timeout = 1500
+EOFCONFIG
+                echo -e "  ${GREEN}Created volume-osd config${NC}"
+                ;;
+            notifications)
+                cat > "$HOME/.config/rw/$config_dir/config.toml" << 'EOFCONFIG'
+[position]
+anchor = "top-right"
+margin_top = 50
+margin_right = 10
+
+[appearance]
+panel_width = 380
+popup_width = 360
+max_height = 600
+max_history = 50
+
+[behavior]
+close_on_escape = true
+close_on_unfocus = true
+dnd_enabled = false
+
+[popup]
+anchor = "top-right"
+margin = 10
+gap = 8
+timeout_low = 3000
+timeout_normal = 5000
+timeout_critical = 0
+max_visible = 5
+
+[animation]
+enabled = true
+type = "slide"
+direction = "down"
+duration = 200
+EOFCONFIG
+                echo -e "  ${GREEN}Created notification-center config${NC}"
+                ;;
         esac
     fi
 done
@@ -239,4 +295,6 @@ echo "  rw toggle stats      # Toggle stats popup"
 echo "  rw toggle control    # Toggle control center"
 echo "  rw toggle media      # Toggle media player"
 echo "  rw-volume            # Launch volume control"
+echo "  rw-volume-osd        # Launch volume OSD daemon"
+echo "  rw-notifications     # Launch notification daemon"
 echo "  rw list              # List all widgets"

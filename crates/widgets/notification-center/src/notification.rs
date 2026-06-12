@@ -71,13 +71,7 @@ pub struct ImageData {
 }
 
 impl Notification {
-    pub fn new(
-        id: u32,
-        app_name: String,
-        app_icon: String,
-        summary: String,
-        body: String,
-    ) -> Self {
+    pub fn new(id: u32, app_name: String, app_icon: String, summary: String, body: String) -> Self {
         Self {
             id,
             app_name,
@@ -235,14 +229,17 @@ impl NotificationStore {
         }
 
         // Get IDs sorted by timestamp (oldest first)
-        let mut entries: Vec<_> = self.notifications.iter()
+        let mut entries: Vec<_> = self
+            .notifications
+            .iter()
             .map(|(id, n)| (*id, n.timestamp))
             .collect();
         entries.sort_by(|a, b| a.1.cmp(&b.1));
 
         // Collect IDs to remove
         let to_remove = entries.len() - self.max_history;
-        let ids_to_remove: Vec<u32> = entries.into_iter()
+        let ids_to_remove: Vec<u32> = entries
+            .into_iter()
             .take(to_remove)
             .map(|(id, _)| id)
             .collect();

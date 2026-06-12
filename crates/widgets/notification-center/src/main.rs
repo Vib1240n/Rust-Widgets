@@ -6,7 +6,7 @@ mod panel;
 mod popup;
 
 use config::Config;
-use dbus::NotificationEvent;
+use dbus::{NotificationEvent, NotificationResponse};
 use gtk4::glib;
 use gtk4::prelude::*;
 use gtk4::Application;
@@ -134,11 +134,11 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
     ));
 
     // Create panel (hidden initially)
-    let panel = Rc::new(NotificationPanel::new(
-        app,
-        config.clone(),
-        panel_action_tx,
-    ));
+    let panel = Rc::new(NotificationPanel::new(app, config.clone(), panel_action_tx));
+
+    // Channel for sending DBus signals back (action invoked, closed)
+    let (dbus_response_tx, mut dbus_response_rx) =
+        mpsc::unbounded_channel::<NotificationResponse>();
 
     // Start DBus server in tokio runtime
     let dbus_tx_clone = dbus_tx.clone();
@@ -148,9 +148,28 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
             match dbus::start_server(dbus_tx_clone).await {
                 Ok((conn, _server)) => {
                     tracing::info!("DBus server running");
-                    // Keep connection alive
+                    // Process signal emissions from the UI thread
                     loop {
-                        tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
+                        match dbus_response_rx.recv().await {
+                            Some(response) => match response {
+                                NotificationResponse::Closed { id, reason } => {
+                                    if let Err(e) = dbus::emit_closed(&conn, id, reason).await {
+                                        tracing::warn!("Failed to emit closed signal: {}", e);
+                                    }
+                                }
+                                NotificationResponse::ActionInvoked { id, action_key } => {
+                                    if let Err(e) =
+                                        dbus::emit_action_invoked(&conn, id, &action_key).await
+                                    {
+                                        tracing::warn!(
+                                            "Failed to emit action_invoked signal: {}",
+                                            e
+                                        );
+                                    }
+                                }
+                            },
+                            None => break,
+                        }
                     }
                 }
                 Err(e) => {
@@ -179,8 +198,7 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
 
                     // Show popup if not DND (unless critical)
                     let is_dnd = *dnd_clone.borrow();
-                    let is_critical =
-                        notif.urgency == notification::Urgency::Critical;
+                    let is_critical = notif.urgency == notification::Urgency::Critical;
 
                     if !is_dnd || is_critical {
                         popup_manager_clone.show(&notif);
@@ -209,6 +227,7 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
     // Process popup actions
     let store_clone = store.clone();
     let panel_clone = panel.clone();
+    let dbus_response_tx_clone = dbus_response_tx.clone();
 
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
         while let Ok(action) = popup_action_rx.try_recv() {
@@ -218,16 +237,34 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
                     if let Some(notif) = store_clone.borrow_mut().get_mut(id) {
                         notif.dismissed = true;
                     }
-                    // TODO: emit closed signal
+                    // Emit closed signal (reason: dismissed by user)
+                    let _ = dbus_response_tx_clone.send(NotificationResponse::Closed {
+                        id,
+                        reason: dbus::close_reason::DISMISSED,
+                    });
                 }
                 PopupAction::ActionInvoked(id, action_key) => {
-                    // TODO: emit action invoked signal
-                    tracing::info!("Action invoked: {} -> {}", id, action_key);
+                    // Emit action invoked signal - this tells the source app to activate
+                    let _ = dbus_response_tx_clone
+                        .send(NotificationResponse::ActionInvoked { id, action_key });
                 }
                 PopupAction::Clicked(id) => {
-                    // Open notification center and scroll to notification
-                    panel_clone.show();
-                    panel_clone.update(&store_clone.borrow());
+                    // Try to activate the source app via "default" action
+                    let store_ref = store_clone.borrow();
+                    if let Some(notif) = store_ref.get(id) {
+                        let has_default = notif.actions.iter().any(|(a, _)| a == "default");
+                        if has_default {
+                            let _ =
+                                dbus_response_tx_clone.send(NotificationResponse::ActionInvoked {
+                                    id,
+                                    action_key: "default".to_string(),
+                                });
+                        } else {
+                            // Fallback: try to launch via desktop entry
+                            activate_by_desktop_entry(notif);
+                        }
+                    }
+                    drop(store_ref);
                 }
             }
         }
@@ -238,6 +275,7 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
     let store_clone = store.clone();
     let panel_clone = panel.clone();
     let dnd_clone = dnd_enabled.clone();
+    let dbus_response_tx_clone = dbus_response_tx.clone();
 
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
         while let Ok(action) = panel_action_rx.try_recv() {
@@ -246,20 +284,42 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
                     panel_clone.hide();
                 }
                 PanelAction::ClearAll => {
+                    // Emit closed signals for all
+                    let store_ref = store_clone.borrow();
+                    for notif in store_ref.all() {
+                        let _ = dbus_response_tx_clone.send(NotificationResponse::Closed {
+                            id: notif.id,
+                            reason: dbus::close_reason::DISMISSED,
+                        });
+                    }
+                    drop(store_ref);
                     store_clone.borrow_mut().clear_all();
                     panel_clone.update(&store_clone.borrow());
                 }
                 PanelAction::DismissOne(id) => {
+                    let _ = dbus_response_tx_clone.send(NotificationResponse::Closed {
+                        id,
+                        reason: dbus::close_reason::DISMISSED,
+                    });
                     store_clone.borrow_mut().remove(id);
                     panel_clone.update(&store_clone.borrow());
                 }
                 PanelAction::ActionInvoked(id, action_key) => {
-                    tracing::info!("Panel action: {} -> {}", id, action_key);
-                    // TODO: emit DBus signal
+                    let _ = dbus_response_tx_clone
+                        .send(NotificationResponse::ActionInvoked { id, action_key });
                 }
                 PanelAction::ToggleDnd(enabled) => {
                     *dnd_clone.borrow_mut() = enabled;
                     tracing::info!("DND: {}", enabled);
+                }
+                PanelAction::OpenSettings => {
+                    let config_path = Config::config_path();
+                    if let Err(e) = std::process::Command::new("xdg-open")
+                        .arg(&config_path)
+                        .spawn()
+                    {
+                        tracing::warn!("Failed to open settings: {}", e);
+                    }
                 }
             }
         }
@@ -313,4 +373,41 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
     });
 
     tracing::info!("Notification center ready");
+}
+
+/// Try to activate/focus the app that sent the notification
+fn activate_by_desktop_entry(notif: &notification::Notification) {
+    // Try desktop_entry hint first (e.g. "discord", "firefox")
+    if let Some(ref entry) = notif.desktop_entry {
+        let desktop_id = if entry.ends_with(".desktop") {
+            entry.clone()
+        } else {
+            format!("{}.desktop", entry)
+        };
+
+        if let Some(app_info) = gtk4::gio::DesktopAppInfo::new(&desktop_id) {
+            if let Err(e) = app_info.launch(&[], gtk4::gio::AppLaunchContext::NONE) {
+                tracing::warn!("Failed to launch {}: {}", desktop_id, e);
+            }
+            return;
+        }
+    }
+
+    // Fallback: try matching app_name to a desktop file
+    let app_lower = notif.app_name.to_lowercase();
+    let candidates = [
+        format!("{}.desktop", app_lower),
+        format!("org.{}.{}.desktop", app_lower, app_lower),
+    ];
+
+    for candidate in &candidates {
+        if let Some(app_info) = gtk4::gio::DesktopAppInfo::new(candidate) {
+            if let Err(e) = app_info.launch(&[], gtk4::gio::AppLaunchContext::NONE) {
+                tracing::warn!("Failed to launch {}: {}", candidate, e);
+            }
+            return;
+        }
+    }
+
+    tracing::debug!("No desktop entry found for app: {}", notif.app_name);
 }

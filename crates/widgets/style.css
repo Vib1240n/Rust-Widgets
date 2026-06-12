@@ -3,7 +3,6 @@
  * Location: ~/.config/rw/style.css
  * ===========================================================================*/
 
-
 /* ===========================================================================
  * CRITICAL: Window Transparency for Hyprland Blur
  * These rules ensure the GTK window is fully transparent so Hyprland
@@ -26,7 +25,6 @@ window > * {
   background-color: transparent;
 }
 
-
 /* ===========================================================================
  * Widget Containers - Semi-transparent for blur effect
  * ===========================================================================*/
@@ -44,7 +42,6 @@ window > * {
   padding: 12px;
   box-shadow: 0 8px 32px alpha(#000, 0.4);
 }
-
 
 /* ===========================================================================
  * COMMON - Typography
@@ -67,7 +64,6 @@ separator {
 .section-title:first-child {
   margin-top: 0;
 }
-
 
 /* ===========================================================================
  * COMMON - Progress Bars
@@ -97,7 +93,6 @@ progressbar.warning progress {
 progressbar.critical progress {
   background-color: #ed8796;
 }
-
 
 /* ===========================================================================
  * COMMON - Sliders / Scales
@@ -129,7 +124,6 @@ scale slider:hover {
 scale.muted highlight {
   background: alpha(#fcfcfc, 0.25);
 }
-
 
 /* ===========================================================================
  * COMMON - Buttons
@@ -172,7 +166,6 @@ button.destructive-action:hover {
   background: alpha(#ed8796, 0.3);
 }
 
-
 /* ===========================================================================
  * COMMON - Switches
  * ===========================================================================*/
@@ -195,7 +188,6 @@ switch slider {
   margin: 2px;
 }
 
-
 /* ===========================================================================
  * COMMON - Empty State & Urgency
  * ===========================================================================*/
@@ -217,7 +209,6 @@ switch slider {
   border-color: #ed8796;
   background-color: alpha(#281c1e, 0.75);
 }
-
 
 /* ===========================================================================
  * STATS-POPUP
@@ -268,7 +259,6 @@ switch slider {
 .temp-critical {
   color: #ed8796;
 }
-
 
 /* ===========================================================================
  * CONTROL-CENTER - Toggles
@@ -325,7 +315,6 @@ switch slider {
   color: #141618;
 }
 
-
 /* ===========================================================================
  * CONTROL-CENTER - Sliders
  * ===========================================================================*/
@@ -375,7 +364,6 @@ switch slider {
 .output-selector:hover {
   background: alpha(#292c30, 0.7);
 }
-
 
 /* ===========================================================================
  * CONTROL-CENTER - Media Section
@@ -438,7 +426,6 @@ switch slider {
   background: alpha(#3daee9, 0.85);
 }
 
-
 /* ===========================================================================
  * CONTROL-CENTER - Stats Section
  * ===========================================================================*/
@@ -449,7 +436,6 @@ switch slider {
 .stats-row {
   margin: 2px 0;
 }
-
 
 /* ===========================================================================
  * VOLUME-CONTROL
@@ -668,7 +654,6 @@ switch slider {
   background: none;
 }
 
-
 /* ===========================================================================
  * MEDIA-PLAYER
  * ===========================================================================*/
@@ -843,13 +828,325 @@ switch slider {
   -gtk-icon-size: 16px;
 }
 
+/* ============================================
+   NOTIFICATION CENTER - GLASSMORPHIC DESIGN
+   Based on Figma: Glassmorphic Notification Center
+   ============================================ */
 
-/* ===========================================================================
- * NOTIFICATION-CENTER - Popups
- * ===========================================================================*/
-.popup-container.urgency-critical {
-  border-color: #ed8796;
-  background-color: alpha(#281c1e, 0.75);
+/* Main container - glassmorphic with purple tint */
+.nc-container {
+  background-color: alpha(#ffffff, 0.1);
+  border: 1px solid alpha(#ffffff, 0.2);
+  border-radius: 24px;
+  padding: 0;
+  min-width: 400px;
+}
+
+/* ==================== HEADER ==================== */
+.nc-header {
+  padding: 24px;
+  border-bottom: 1px solid alpha(#ffffff, 0.1);
+}
+
+/* Bell icon wrapper - rounded box */
+.nc-bell-wrapper {
+  background-color: alpha(#ffffff, 0.1);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.nc-bell-icon {
+  color: #ffffff;
+  -gtk-icon-style: symbolic;
+}
+
+/* Title */
+.nc-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+/* Subtitle (unread count) */
+.nc-subtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: alpha(#ffffff, 0.6);
+  margin-top: 2px;
+}
+
+/* Settings button */
+.nc-settings-btn {
+  background-color: alpha(#ffffff, 0.05);
+  border-radius: 8px;
+  padding: 8px;
+  border: none;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.nc-settings-btn:hover {
+  background-color: alpha(#ffffff, 0.1);
+}
+
+.nc-settings-btn image {
+  color: alpha(#ffffff, 0.7);
+  -gtk-icon-style: symbolic;
+}
+
+.nc-settings-btn:hover image {
+  color: #ffffff;
+}
+
+/* ==================== SCROLL AREA ==================== */
+.nc-scroll {
+  background-color: transparent;
+}
+
+.nc-scroll undershoot.top,
+.nc-scroll undershoot.bottom,
+.nc-scroll overshoot.top,
+.nc-scroll overshoot.bottom {
+  background: none;
+}
+
+/* ==================== LIST ==================== */
+.nc-list {
+  background-color: transparent;
+  padding: 12px;
+}
+
+.nc-list row {
+  background-color: transparent;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.nc-list row:last-child {
+  margin-bottom: 0;
+}
+
+.nc-row {
+  background-color: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* ==================== NOTIFICATION CARDS ==================== */
+.nc-card {
+  background-color: alpha(#ffffff, 0.05);
+  border: 1px solid alpha(#ffffff, 0.1);
+  border-radius: 16px;
+  padding: 16px;
+  transition: all 200ms ease;
+}
+
+.nc-card:hover {
+  background-color: alpha(#ffffff, 0.1);
+  /* Slight scale effect - GTK4 doesn't support transform, using shadow instead */
+}
+
+/* ==================== ICON WRAPPER (colored background) ==================== */
+.nc-icon-wrapper {
+  background-color: alpha(#ffffff, 0.05);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+/* Icon colors by type */
+.nc-icon-info {
+  background-color: alpha(#60a5fa, 0.15);
+}
+
+.nc-icon-success {
+  background-color: alpha(#34d399, 0.15);
+}
+
+.nc-icon-warning {
+  background-color: alpha(#fbbf24, 0.15);
+}
+
+.nc-icon-error {
+  background-color: alpha(#f87171, 0.15);
+}
+
+/* Icon image colors */
+.nc-type-icon {
+  -gtk-icon-style: symbolic;
+}
+
+.nc-icon-color-info {
+  color: #60a5fa;
+}
+
+.nc-icon-color-success {
+  color: #34d399;
+}
+
+.nc-icon-color-warning {
+  color: #fbbf24;
+}
+
+.nc-icon-color-error {
+  color: #f87171;
+}
+
+/* ==================== CARD CONTENT ==================== */
+.nc-card-content {
+  padding: 0;
+}
+
+/* Card title */
+.nc-card-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+/* App name */
+.nc-card-app {
+  font-size: 11px;
+  font-weight: 400;
+  color: alpha(#ffffff, 0.4);
+  margin-top: 1px;
+}
+
+/* Time */
+.nc-card-time {
+  font-size: 11px;
+  font-weight: 400;
+  color: alpha(#ffffff, 0.5);
+}
+
+/* Body text */
+.nc-card-body {
+  font-size: 13px;
+  font-weight: 400;
+  color: alpha(#ffffff, 0.7);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ==================== DISMISS BUTTON ==================== */
+.nc-dismiss-btn {
+  background-color: alpha(#ffffff, 0.05);
+  border-radius: 8px;
+  padding: 6px;
+  border: none;
+  min-width: 24px;
+  min-height: 24px;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.nc-card:hover .nc-dismiss-btn {
+  opacity: 1;
+}
+
+.nc-dismiss-btn:hover {
+  background-color: alpha(#ffffff, 0.1);
+}
+
+.nc-dismiss-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: alpha(#ffffff, 0.5);
+}
+
+.nc-dismiss-btn:hover .nc-dismiss-label {
+  color: #ffffff;
+}
+
+/* ==================== EMPTY STATE ==================== */
+.nc-empty {
+  padding: 48px 24px;
+}
+
+.nc-empty-icon {
+  color: alpha(#ffffff, 0.3);
+  -gtk-icon-style: symbolic;
+}
+
+.nc-empty-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: alpha(#ffffff, 0.6);
+}
+
+/* ==================== FOOTER ==================== */
+.nc-footer {
+  padding: 16px;
+  border-top: 1px solid alpha(#ffffff, 0.1);
+}
+
+.nc-clear-btn {
+  background-color: alpha(#ffffff, 0.05);
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: none;
+  transition: all 200ms ease;
+}
+
+.nc-clear-btn:hover {
+  background-color: alpha(#ffffff, 0.1);
+}
+
+.nc-trash-icon {
+  color: alpha(#ffffff, 0.7);
+  -gtk-icon-style: symbolic;
+}
+
+.nc-clear-label {
+  font-size: 14px;
+  font-weight: 400;
+  color: alpha(#ffffff, 0.7);
+}
+
+.nc-clear-btn:hover .nc-trash-icon,
+.nc-clear-btn:hover .nc-clear-label {
+  color: #ffffff;
+}
+
+/* ==================== PROGRESS BAR ==================== */
+.nc-card-progress {
+  background-color: alpha(#ffffff, 0.1);
+  border-radius: 4px;
+  min-height: 4px;
+}
+
+.nc-card-progress progress {
+  background-color: #60a5fa;
+  border-radius: 4px;
+}
+
+/* ==================== ACTION BUTTONS ==================== */
+.nc-card-actions {
+  margin-top: 8px;
+}
+
+.nc-action-btn {
+  background-color: alpha(#ffffff, 0.08);
+  border-radius: 8px;
+  padding: 6px 12px;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  color: alpha(#ffffff, 0.8);
+}
+
+.nc-action-btn:hover {
+  background-color: alpha(#ffffff, 0.15);
+  color: #ffffff;
+}
+
+/* ==================== POPUP STYLES ==================== */
+.popup-container {
+  background-color: alpha(#ffffff, 0.1);
+  border: 1px solid alpha(#ffffff, 0.2);
+  border-radius: 16px;
+  padding: 16px;
 }
 
 .popup-header {
@@ -857,274 +1154,89 @@ switch slider {
 }
 
 .popup-app-icon {
-  opacity: 0.8;
+  color: alpha(#ffffff, 0.7);
+  -gtk-icon-style: symbolic;
 }
 
 .popup-app-name {
-  font-size: 11px;
-  font-weight: 500;
-  color: alpha(#fcfcfc, 0.55);
+  font-size: 12px;
+  font-weight: 400;
+  color: alpha(#ffffff, 0.6);
 }
 
 .popup-close {
-  background: transparent;
+  background-color: transparent;
   border: none;
-  border-radius: 50%;
-  padding: 4px;
-  min-width: 24px;
-  min-height: 24px;
-  color: alpha(#fcfcfc, 0.55);
-  transition: all 150ms ease;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: alpha(#ffffff, 0.5);
+  min-width: 20px;
+  min-height: 20px;
 }
 
 .popup-close:hover {
-  background: alpha(#fcfcfc, 0.15);
-  color: #fcfcfc;
-}
-
-.popup-content {
-  margin-bottom: 8px;
-}
-
-.popup-image {
-  border-radius: 8px;
-  min-width: 48px;
-  min-height: 48px;
+  background-color: alpha(#ffffff, 0.1);
+  color: #ffffff;
 }
 
 .popup-summary {
   font-size: 14px;
-  font-weight: 600;
-  color: #fcfcfc;
+  font-weight: 500;
+  color: #ffffff;
 }
 
 .popup-body {
-  font-size: 12px;
-  color: alpha(#fcfcfc, 0.55);
-  line-height: 1.4;
+  font-size: 13px;
+  font-weight: 400;
+  color: alpha(#ffffff, 0.7);
+  margin-top: 4px;
+}
+
+.popup-image {
+  border-radius: 8px;
 }
 
 .popup-progress {
-  margin-top: 8px;
-}
-
-.popup-progress trough {
+  background-color: alpha(#ffffff, 0.1);
+  border-radius: 4px;
   min-height: 4px;
+  margin-top: 8px;
 }
 
 .popup-progress progress {
-  min-height: 4px;
+  background-color: #60a5fa;
+  border-radius: 4px;
 }
 
 .popup-actions {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid alpha(#57595c, 0.25);
+  margin-top: 12px;
 }
 
 .popup-action-btn {
-  background: alpha(#3daee9, 0.15);
-  border: none;
+  background-color: alpha(#ffffff, 0.08);
   border-radius: 8px;
   padding: 6px 12px;
+  border: none;
   font-size: 12px;
   font-weight: 500;
-  color: #3daee9;
+  color: alpha(#ffffff, 0.8);
 }
 
 .popup-action-btn:hover {
-  background: alpha(#3daee9, 0.25);
+  background-color: alpha(#ffffff, 0.15);
+  color: #ffffff;
 }
 
-
-/* ===========================================================================
- * NOTIFICATION-CENTER - Panel
- * ===========================================================================*/
-.nc-header {
-  margin-bottom: 12px;
+/* Urgency styles for popups */
+.urgency-low {
+  border-left: 3px solid alpha(#60a5fa, 0.5);
 }
 
-.nc-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #fcfcfc;
+.urgency-critical {
+  border-left: 3px solid #f87171;
 }
-
-.nc-count {
-  background: #3daee9;
-  color: #141618;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 10px;
-  min-width: 20px;
-  text-align: center;
-}
-
-.nc-dnd-row {
-  background: alpha(#292c30, 0.4);
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin-bottom: 12px;
-}
-
-.nc-dnd-icon {
-  color: alpha(#fcfcfc, 0.55);
-}
-
-.nc-dnd-label {
-  font-size: 13px;
-  color: alpha(#fcfcfc, 0.55);
-}
-
-.nc-scroll {
-  background: transparent;
-}
-
-.nc-list {
-  background: transparent;
-}
-
-.nc-notification-row {
-  background: transparent;
-  border-radius: 12px;
-  margin: 4px 0;
-}
-
-.nc-notification-row:hover {
-  background: alpha(#292c30, 0.4);
-}
-
-.nc-notification-row.dismissed {
-  opacity: 0.6;
-}
-
-.nc-notification-row.urgency-low {
-  opacity: 0.85;
-}
-
-.nc-notification-row.urgency-critical {
-  background: alpha(#ed8796, 0.1);
-  border-left: 3px solid #ed8796;
-}
-
-.nc-notification {
-  padding: 12px;
-}
-
-.nc-app-icon {
-  border-radius: 8px;
-}
-
-.nc-app-name {
-  font-size: 11px;
-  font-weight: 500;
-  color: alpha(#fcfcfc, 0.55);
-}
-
-.nc-time {
-  font-size: 10px;
-  color: alpha(#fcfcfc, 0.55);
-}
-
-.nc-summary {
-  font-size: 13px;
-  font-weight: 600;
-  color: #fcfcfc;
-}
-
-.nc-body {
-  font-size: 12px;
-  color: alpha(#fcfcfc, 0.55);
-  line-height: 1.4;
-}
-
-.nc-progress {
-  margin-top: 8px;
-}
-
-.nc-progress trough {
-  min-height: 4px;
-}
-
-.nc-progress progress {
-  min-height: 4px;
-}
-
-.nc-actions {
-  margin-top: 8px;
-}
-
-.nc-action-btn {
-  background: alpha(#292c30, 0.5);
-  border: none;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 11px;
-  font-weight: 500;
-  color: alpha(#fcfcfc, 0.55);
-}
-
-.nc-action-btn:hover {
-  background: alpha(#3daee9, 0.2);
-  color: #3daee9;
-}
-
-.nc-dismiss-btn {
-  background: transparent;
-  border: none;
-  border-radius: 50%;
-  padding: 4px;
-  min-width: 24px;
-  min-height: 24px;
-  color: alpha(#fcfcfc, 0.55);
-  opacity: 0;
-  transition: all 150ms ease;
-}
-
-.nc-notification-row:hover .nc-dismiss-btn {
-  opacity: 1;
-}
-
-.nc-dismiss-btn:hover {
-  background: alpha(#ed8796, 0.2);
-  color: #ed8796;
-}
-
-.nc-empty {
-  padding: 32px;
-}
-
-.nc-empty-icon {
-  color: alpha(#fcfcfc, 0.55);
-  opacity: 0.5;
-}
-
-.nc-empty-label {
-  font-size: 14px;
-  color: alpha(#fcfcfc, 0.55);
-}
-
-.nc-footer {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid alpha(#57595c, 0.25);
-}
-
-.nc-clear-btn {
-  background: alpha(#ed8796, 0.15);
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #ed8796;
-}
-
-.nc-clear-btn:hover {
-  background: alpha(#ed8796, 0.25);
-}
-
 
 /* ===========================================================================
  * VOLUME OSD / BRIGHTNESS OSD

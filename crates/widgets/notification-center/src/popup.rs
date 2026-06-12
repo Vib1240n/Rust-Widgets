@@ -2,9 +2,7 @@ use crate::config::Config;
 use crate::notification::Notification;
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{
-    Box, Button, GestureClick, Image, Label, Orientation, ProgressBar, Widget,
-};
+use gtk4::{Box, Button, GestureClick, Image, Label, Orientation, ProgressBar};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -35,8 +33,8 @@ pub struct PopupManager {
 
 struct PopupWindow {
     window: gtk4::Window,
-    height: i32,
-    timeout_source: Option<glib::SourceId>,
+    height: Rc<Cell<i32>>,
+    timeout_source: Rc<RefCell<Option<glib::SourceId>>>,
 }
 
 impl PopupManager {
@@ -66,7 +64,8 @@ impl PopupManager {
             }
         }
 
-        // Calculate position
+        // Calculate position - use estimated height for initial offset
+        let estimated_height = 100;
         let margin_top = self.config.popup.margin + self.stack_offset.get();
 
         // Create window
@@ -88,62 +87,120 @@ impl PopupManager {
         window.set_margin(Edge::Top, margin_top);
         window.set_margin(Edge::Right, self.config.popup.margin);
 
-        // Build content
-        let content = self.build_popup_content(notification);
-        window.set_child(Some(&content));
+        // ==================== OUTER WRAPPER (for blur corner fix) ====================
+        let outer_wrapper = Box::new(Orientation::Vertical, 0);
+        outer_wrapper.set_margin_start(16);
+        outer_wrapper.set_margin_end(16);
+        outer_wrapper.set_margin_top(16);
+        outer_wrapper.set_margin_bottom(16);
 
-        // Click to open notification center or invoke default action
-        let gesture = GestureClick::new();
-        let action_tx = self.action_tx.clone();
-        let notif_id = id;
-        let has_default = notification
-            .actions
-            .iter()
-            .any(|(a, _)| a == "default");
-        gesture.connect_released(move |_, _, _, _| {
-            if has_default {
-                let _ = action_tx.send(PopupAction::ActionInvoked(
-                    notif_id,
-                    "default".to_string(),
-                ));
-            } else {
-                let _ = action_tx.send(PopupAction::Clicked(notif_id));
-            }
-        });
-        window.add_controller(gesture);
+        // Build content - returns (content_box, close_button)
+        let (content, close_btn) = self.build_popup_content(notification);
+        outer_wrapper.append(&content);
+        window.set_child(Some(&outer_wrapper));
 
-        window.present();
+        // Shared state for close button
+        let popup_height: Rc<Cell<i32>> = Rc::new(Cell::new(estimated_height));
+        let timeout_source: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
 
-        // Get actual height after present
-        let height = window.height().max(80);
-
-        // Update stack offset
-        self.stack_offset
-            .set(self.stack_offset.get() + height + self.config.popup.gap);
-
-        // Setup auto-dismiss timeout
-        let timeout = notification.get_timeout(&self.config.popup);
-        let timeout_source = if timeout > 0 {
+        // Wire up close button BEFORE storing popup
+        {
             let popups = self.popups.clone();
             let stack_offset = self.stack_offset.clone();
             let action_tx = self.action_tx.clone();
             let gap = self.config.popup.gap;
-            Some(glib::timeout_add_local_once(
-                Duration::from_millis(timeout),
-                move || {
-                    if let Some(popup) = popups.borrow_mut().remove(&id) {
-                        // Update stack offset
-                        stack_offset.set(
-                            (stack_offset.get() - popup.height - gap).max(0),
-                        );
-                        popup.window.close();
-                        let _ = action_tx.send(PopupAction::Dismissed(id));
-                    }
-                },
-            ))
-        } else {
-            None
-        };
+            let window_clone = window.clone();
+            let height_clone = popup_height.clone();
+            let timeout_clone = timeout_source.clone();
+
+            close_btn.connect_clicked(move |_| {
+                // Cancel timeout if any
+                if let Some(source) = timeout_clone.borrow_mut().take() {
+                    source.remove();
+                }
+                // Update stack offset
+                let h = height_clone.get();
+                stack_offset.set((stack_offset.get() - h - gap).max(0));
+                // Remove from hashmap
+                popups.borrow_mut().remove(&id);
+                // Close window
+                window_clone.close();
+                // Notify
+                let _ = action_tx.send(PopupAction::Dismissed(id));
+            });
+        }
+
+        // Click gesture on CONTENT (not window) to allow button clicks
+        let gesture = GestureClick::new();
+        let action_tx = self.action_tx.clone();
+        let notif_id = id;
+        let has_default = notification.actions.iter().any(|(a, _)| a == "default");
+        let popup_width = self.config.appearance.popup_width;
+
+        gesture.connect_released(move |_, _, x, _| {
+            // Skip if click is in close button area (top-right corner)
+            // Close button is roughly 32px from right edge
+            if x > (popup_width - 50) as f64 {
+                return;
+            }
+
+            if has_default {
+                let _ = action_tx.send(PopupAction::ActionInvoked(notif_id, "default".to_string()));
+            } else {
+                let _ = action_tx.send(PopupAction::Clicked(notif_id));
+            }
+        });
+        content.add_controller(gesture);
+
+        window.present();
+
+        // Defer height measurement until after layout
+        {
+            let window_clone = window.clone();
+            let height_clone = popup_height.clone();
+            let stack_offset = self.stack_offset.clone();
+            let gap = self.config.popup.gap;
+
+            glib::idle_add_local_once(move || {
+                let actual_height = window_clone.height().max(80);
+                let old_estimate = height_clone.get();
+                height_clone.set(actual_height);
+
+                // Adjust stack offset for difference
+                let diff = actual_height - old_estimate;
+                if diff != 0 {
+                    stack_offset.set(stack_offset.get() + diff);
+                }
+            });
+        }
+
+        // Update stack offset with estimate (will be corrected above)
+        self.stack_offset
+            .set(self.stack_offset.get() + estimated_height + self.config.popup.gap);
+
+        // Setup auto-dismiss timeout
+        let timeout = notification.get_timeout(&self.config.popup);
+        if timeout > 0 {
+            let popups = self.popups.clone();
+            let stack_offset = self.stack_offset.clone();
+            let action_tx = self.action_tx.clone();
+            let gap = self.config.popup.gap;
+            let height_for_timeout = popup_height.clone();
+            let timeout_for_clear = timeout_source.clone();
+
+            let source = glib::timeout_add_local_once(Duration::from_millis(timeout), move || {
+                // Clear timeout reference
+                timeout_for_clear.borrow_mut().take();
+
+                if let Some(popup) = popups.borrow_mut().remove(&id) {
+                    let h = height_for_timeout.get();
+                    stack_offset.set((stack_offset.get() - h - gap).max(0));
+                    popup.window.close();
+                    let _ = action_tx.send(PopupAction::Dismissed(id));
+                }
+            });
+            *timeout_source.borrow_mut() = Some(source);
+        }
 
         // Animate in
         if self.config.animation.enabled {
@@ -154,7 +211,7 @@ impl PopupManager {
             id,
             PopupWindow {
                 window,
-                height,
+                height: popup_height,
                 timeout_source,
             },
         );
@@ -164,14 +221,14 @@ impl PopupManager {
     pub fn dismiss(&self, id: u32) {
         if let Some(popup) = self.popups.borrow_mut().remove(&id) {
             // Cancel timeout if any
-            if let Some(source) = popup.timeout_source {
+            if let Some(source) = popup.timeout_source.borrow_mut().take() {
                 source.remove();
             }
 
             // Update stack offset
-            self.stack_offset.set(
-                (self.stack_offset.get() - popup.height - self.config.popup.gap).max(0),
-            );
+            let h = popup.height.get();
+            self.stack_offset
+                .set((self.stack_offset.get() - h - self.config.popup.gap).max(0));
 
             // Animate out if enabled
             if self.config.animation.enabled {
@@ -203,7 +260,8 @@ impl PopupManager {
         self.popups.borrow().keys().copied().next()
     }
 
-    fn build_popup_content(&self, notification: &Notification) -> Widget {
+    /// Build popup content - returns (content_box, close_button)
+    fn build_popup_content(&self, notification: &Notification) -> (Box, Button) {
         let container = Box::new(Orientation::Vertical, 0);
         container.add_css_class("popup-container");
         container.set_width_request(self.config.appearance.popup_width);
@@ -238,25 +296,10 @@ impl PopupManager {
         app_label.set_halign(gtk4::Align::Start);
         header.append(&app_label);
 
-        // Close button
+        // Close button - we return this so the caller can wire it up
         let close_btn = Button::new();
         close_btn.set_icon_name("window-close-symbolic");
-        close_btn.add_css_class("popup-close");
-        let popups = self.popups.clone();
-        let stack_offset = self.stack_offset.clone();
-        let action_tx = self.action_tx.clone();
-        let gap = self.config.popup.gap;
-        let id = notification.id;
-        close_btn.connect_clicked(move |_| {
-            if let Some(popup) = popups.borrow_mut().remove(&id) {
-                if let Some(source) = popup.timeout_source {
-                    source.remove();
-                }
-                stack_offset.set((stack_offset.get() - popup.height - gap).max(0));
-                popup.window.close();
-                let _ = action_tx.send(PopupAction::Dismissed(id));
-            }
-        });
+        close_btn.add_css_class("popup-close-btn");
         header.append(&close_btn);
 
         container.append(&header);
@@ -332,10 +375,8 @@ impl PopupManager {
                 let notif_id = notification.id;
                 let action_key = action_id.clone();
                 btn.connect_clicked(move |_| {
-                    let _ = action_tx.send(PopupAction::ActionInvoked(
-                        notif_id,
-                        action_key.clone(),
-                    ));
+                    let _ =
+                        action_tx.send(PopupAction::ActionInvoked(notif_id, action_key.clone()));
                 });
                 actions_box.append(&btn);
             }
@@ -343,18 +384,16 @@ impl PopupManager {
             container.append(&actions_box);
         }
 
-        container.upcast()
+        (container, close_btn)
     }
 }
 
 /// Convert notification image data to GDK pixbuf
 fn image_data_to_pixbuf(data: &crate::notification::ImageData) -> Option<gtk4::gdk_pixbuf::Pixbuf> {
-    // Pixbuf::from_bytes can panic on invalid data, so we validate first
     if data.width <= 0 || data.height <= 0 || data.rowstride <= 0 || data.data.is_empty() {
         return None;
     }
-    
-    // Check if data size is reasonable
+
     let expected_size = (data.height * data.rowstride) as usize;
     if data.data.len() < expected_size {
         return None;
@@ -374,20 +413,26 @@ fn image_data_to_pixbuf(data: &crate::notification::ImageData) -> Option<gtk4::g
 /// Strip basic HTML/pango markup from notification body
 fn strip_markup(text: &str) -> String {
     let mut result = text.to_string();
-    
-    // Remove common formatting tags
-    for tag in &["<b>", "</b>", "<i>", "</i>", "<u>", "</u>", "<br>", "<br/>", "<br />"] {
+
+    for tag in &[
+        "<b>", "</b>", "<i>", "</i>", "<u>", "</u>", "<br>", "<br/>", "<br />",
+    ] {
         result = result.replace(tag, "");
     }
-    
-    // Simple <a> tag removal - find <a...>content</a> and keep content
+
+    // Simple <a> tag removal
     while let Some(start) = result.find("<a") {
         if let Some(tag_end) = result[start..].find('>') {
             let tag_end_abs = start + tag_end + 1;
             if let Some(close) = result[tag_end_abs..].find("</a>") {
                 let close_abs = tag_end_abs + close;
                 let content = &result[tag_end_abs..close_abs];
-                result = format!("{}{}{}", &result[..start], content, &result[close_abs + 4..]);
+                result = format!(
+                    "{}{}{}",
+                    &result[..start],
+                    content,
+                    &result[close_abs + 4..]
+                );
             } else {
                 break;
             }
@@ -395,7 +440,7 @@ fn strip_markup(text: &str) -> String {
             break;
         }
     }
-    
+
     // Remove any remaining tags
     while let Some(start) = result.find('<') {
         if let Some(end) = result[start..].find('>') {
@@ -404,17 +449,14 @@ fn strip_markup(text: &str) -> String {
             break;
         }
     }
-    
-    // Decode basic entities
-    result = result
+
+    result
         .replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&amp;", "&")
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
-        .replace("&apos;", "'");
-    
-    result
+        .replace("&apos;", "'")
 }
 
 /// Slide-in animation
@@ -432,7 +474,7 @@ fn animate_slide_in(window: &gtk4::Window, duration_ms: u64) {
     glib::timeout_add_local(Duration::from_millis(step_duration), move || {
         let current = step_count.get();
         let progress = (current + 1) as f64 / steps as f64;
-        let eased = 1.0 - (1.0 - progress).powi(3); // ease-out-cubic
+        let eased = 1.0 - (1.0 - progress).powi(3);
 
         let margin = start_margin + ((final_margin - start_margin) as f64 * eased) as i32;
         w.set_margin(Edge::Top, margin);
@@ -466,7 +508,7 @@ where
     glib::timeout_add_local(Duration::from_millis(step_duration), move || {
         let current = step_count.get();
         let progress = (current + 1) as f64 / steps as f64;
-        let eased = progress.powi(3); // ease-in-cubic
+        let eased = progress.powi(3);
 
         let margin = start_margin + ((end_margin - start_margin) as f64 * eased) as i32;
         w.set_margin(Edge::Top, margin);

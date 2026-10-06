@@ -15,6 +15,15 @@ BLUE='\033[0;34m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 
+# Unlink-then-copy so a running daemon's binary can be replaced without
+# "Text file busy" (the live process keeps its inode; new launches use the new file).
+install_bin() {
+    local src="$1"
+    local name="$2"
+    rm -f "$INSTALL_DIR/$name"
+    cp "$src" "$INSTALL_DIR/$name"
+}
+
 # Widget mapping: name -> (binary, package, config-dir)
 declare -A WIDGETS=(
     ["stats"]="rw-stats:stats-popup:stats-popup"
@@ -23,13 +32,14 @@ declare -A WIDGETS=(
     ["volume"]="rw-volume:volume-control:volume-control"
     ["volume-osd"]="rw-volume-osd:volume-osd:volume-osd"
     ["notifications"]="rw-notifications:notification-center:notification-center"
+    ["network"]="rw-network:network-menu:network-menu"
 )
 
 # Parse arguments
 SELECTED_WIDGETS=()
 if [ $# -eq 0 ]; then
     # No args = install all
-    SELECTED_WIDGETS=("stats" "control" "media" "volume" "volume-osd" "notifications")
+    SELECTED_WIDGETS=("stats" "control" "media" "volume" "volume-osd" "notifications" "network")
     BUILD_ALL=true
 else
     for arg in "$@"; do
@@ -41,9 +51,10 @@ else
             volume|volume-control) SELECTED_WIDGETS+=("volume") ;;
             volume-osd|osd) SELECTED_WIDGETS+=("volume-osd") ;;
             notifications|notification-center|nc) SELECTED_WIDGETS+=("notifications") ;;
+            network|network-menu|wifi) SELECTED_WIDGETS+=("network") ;;
             *)
                 echo -e "${YELLOW}Unknown widget: $arg${NC}"
-                echo "Available: stats, control, media, volume, volume-osd, notifications"
+                echo "Available: stats, control, media, volume, volume-osd, notifications, network"
                 exit 1
                 ;;
         esac
@@ -74,7 +85,7 @@ mkdir -p "$INSTALL_DIR"
 
 # Install CLI if it exists
 if [ -f "target/release/rw" ]; then
-    cp target/release/rw "$INSTALL_DIR/"
+    install_bin target/release/rw rw
     echo -e "  ${GREEN}rw${NC}"
 fi
 
@@ -82,7 +93,7 @@ fi
 for widget in "${SELECTED_WIDGETS[@]}"; do
     IFS=':' read -r binary package config_dir <<< "${WIDGETS[$widget]}"
     if [ -f "target/release/$binary" ]; then
-        cp "target/release/$binary" "$INSTALL_DIR/"
+        install_bin "target/release/$binary" "$binary"
         echo -e "  ${GREEN}$binary${NC}"
     fi
 done
@@ -278,6 +289,24 @@ duration = 200
 EOFCONFIG
                 echo -e "  ${GREEN}Created notification-center config${NC}"
                 ;;
+            network)
+                cat > "$HOME/.config/rw/$config_dir/config.toml" << 'EOFCONFIG'
+[position]
+anchor = "top-right"
+margin_top = 50
+margin_right = 10
+
+[appearance]
+width = 360
+max_networks = 7
+
+[behavior]
+close_on_escape = true
+close_on_unfocus = false
+status_poll = 2000
+EOFCONFIG
+                echo -e "  ${GREEN}Created network-menu config${NC}"
+                ;;
         esac
     fi
 done
@@ -297,4 +326,5 @@ echo "  rw toggle media      # Toggle media player"
 echo "  rw-volume            # Launch volume control"
 echo "  rw-volume-osd        # Launch volume OSD daemon"
 echo "  rw-notifications     # Launch notification daemon"
+echo "  rw-network           # Launch network menu"
 echo "  rw list              # List all widgets"

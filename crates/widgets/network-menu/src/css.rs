@@ -1,0 +1,55 @@
+//! CSS loading for network-menu widget
+
+use gtk4::CssProvider;
+use std::path::PathBuf;
+
+const DEFAULT_STYLE: &str = include_str!("../../style.css");
+const WIDGET_NAME: &str = "network-menu";
+
+pub fn load() {
+    let display = gtk4::gdk::Display::default().expect("Could not get default display");
+
+    let default_provider = CssProvider::new();
+    default_provider.load_from_data(DEFAULT_STYLE);
+    gtk4::style_context_add_provider_for_display(
+        &display,
+        &default_provider,
+        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+    );
+
+    let user_css_path = user_style_path();
+    if user_css_path.exists() {
+        let user_provider = CssProvider::new();
+        user_provider.load_from_path(&user_css_path);
+        gtk4::style_context_add_provider_for_display(
+            &display,
+            &user_provider,
+            gtk4::STYLE_PROVIDER_PRIORITY_USER,
+        );
+        tracing::info!("Loaded user CSS from {:?}", user_css_path);
+    }
+
+    let deprecated_path = deprecated_widget_style_path();
+    if deprecated_path.exists() {
+        tracing::warn!(
+            "DEPRECATED: Per-widget style.css found at {:?}",
+            deprecated_path
+        );
+        tracing::warn!("Please migrate your custom styles to ~/.config/rw/style.css");
+    }
+}
+
+fn user_style_path() -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("~/.config"))
+        .join("rw")
+        .join("style.css")
+}
+
+fn deprecated_widget_style_path() -> PathBuf {
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("~/.config"))
+        .join("rw")
+        .join(WIDGET_NAME)
+        .join("style.css")
+}

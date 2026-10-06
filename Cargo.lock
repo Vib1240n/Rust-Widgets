@@ -239,6 +239,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "brightness-osd"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "gtk4",
+ "gtk4-layer-shell",
+ "serde",
+ "tokio",
+ "toml 0.8.23",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.20.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1129,6 +1143,19 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "network-menu"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "gtk4",
+ "gtk4-layer-shell",
+ "serde",
+ "toml 0.8.23",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

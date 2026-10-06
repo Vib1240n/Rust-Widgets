@@ -125,6 +125,14 @@ const WIDGETS: &[WidgetInfo] = &[
         supports_sighup: true,
     },
     WidgetInfo {
+        name: "network",
+        binary: "rw-network",
+        description: "Wi-Fi / network menu (nmcli)",
+        is_daemon: false,
+        socket_path: None,
+        supports_sighup: false, // No SIGHUP handler; reload restarts instead
+    },
+    WidgetInfo {
         name: "brightness",
         binary: "rw-brightness",
         description: "Brightness OSD [not implemented]",
@@ -164,6 +172,7 @@ fn get_widget_info(widget: &str) -> Option<&'static WidgetInfo> {
         "osd" => WIDGETS.iter().find(|w| w.name == "volume-osd"),
         "notification-center" | "nc" => WIDGETS.iter().find(|w| w.name == "notifications"),
         "media-player" | "player" => WIDGETS.iter().find(|w| w.name == "media"),
+        "network-menu" | "wifi" | "net" => WIDGETS.iter().find(|w| w.name == "network"),
         "brightness-osd" => WIDGETS.iter().find(|w| w.name == "brightness"),
         "power-menu" => WIDGETS.iter().find(|w| w.name == "power"),
         _ => None,
@@ -494,6 +503,7 @@ fn list_widgets() {
     println!("  nc, notification-center -> notifications");
     println!("  osd -> volume-osd");
     println!("  player, media-player -> media");
+    println!("  wifi, net, network-menu -> network");
 }
 
 fn print_stats() {
@@ -560,6 +570,7 @@ fn show_config_path(widget: Option<String>) {
                 "volume-osd" | "osd" => "volume-osd",
                 "notifications" | "notification-center" | "nc" => "notification-center",
                 "media" | "media-player" | "player" => "media-player",
+                "network" | "network-menu" | "wifi" | "net" => "network-menu",
                 _ => &w,
             };
             let widget_dir = base.join(config_name);
@@ -577,6 +588,7 @@ fn show_config_path(widget: Option<String>) {
                     "control" => "control-center",
                     "volume" => "volume-control",
                     "media" => "media-player",
+                    "network" => "network-menu",
                     _ => info.name,
                 };
                 println!("  {}/{}/config.toml", base.display(), config_name);

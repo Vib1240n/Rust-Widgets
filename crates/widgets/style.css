@@ -1295,3 +1295,129 @@ switch slider {
   font-weight: 500;
   font-family: monospace;
 }
+/* ==================== NETWORK MENU ==================== */
+/* Append to crates/widgets/style.css. Reuses .widget-container, .section-title. */
+
+.network-header {
+  padding: 4px 4px 12px 4px;
+}
+.network-header-icon {
+  color: #a8c7fa;
+}
+.network-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e3e2e6;
+}
+.network-status {
+  font-size: 12px;
+  color: alpha(#fcfcfc, 0.55);
+}
+
+.network-actions {
+  padding: 8px 4px 6px 4px;
+}
+.network-rescan-btn {
+  padding: 6px;
+  border-radius: 10px;
+  background-color: alpha(#fcfcfc, 0.06);
+  border: none;
+  min-width: 32px;
+  min-height: 32px;
+}
+.network-rescan-btn:hover {
+  background-color: alpha(#fcfcfc, 0.12);
+}
+.network-rescan-btn image {
+  color: alpha(#fcfcfc, 0.8);
+}
+
+.network-list {
+  padding: 2px;
+}
+
+.network-row {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background-color: transparent;
+  border: none;
+}
+.network-row:hover {
+  background-color: alpha(#fcfcfc, 0.08);
+}
+.network-row.active {
+  background-color: alpha(#a8c7fa, 0.16);
+}
+.network-signal {
+  color: #a8c7fa;
+}
+.network-ssid {
+  font-size: 13px;
+  font-weight: 500;
+  color: #e3e2e6;
+}
+.network-row-sub {
+  font-size: 11px;
+  color: alpha(#fcfcfc, 0.5);
+}
+.network-row.active .network-row-sub {
+  color: #a8c7fa;
+}
+.network-lock {
+  color: alpha(#fcfcfc, 0.5);
+}
+.network-empty {
+  padding: 16px;
+  color: alpha(#fcfcfc, 0.5);
+  font-size: 12px;
+}
+
+/* Popovers (password entry + right-click options) */
+.network-popover {
+  padding: 6px;
+}
+.network-popover contents {
+  background-color: alpha(#1a1c1e, 0.96);
+  border: 1px solid alpha(#57595c, 0.3);
+  border-radius: 14px;
+  padding: 8px;
+}
+.network-popover-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e3e2e6;
+  margin-bottom: 4px;
+}
+.network-connect-btn {
+  margin-top: 4px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background-color: #a8c7fa;
+  color: #06234b;
+  font-weight: 600;
+  border: none;
+}
+.network-connect-btn:hover {
+  background-color: #bcd4fb;
+}
+.network-menu-item {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background-color: transparent;
+  border: none;
+  color: #e3e2e6;
+  font-size: 13px;
+}
+.network-menu-item:hover {
+  background-color: alpha(#fcfcfc, 0.1);
+}
+.network-menu-item.destructive {
+  color: #ed8796;
+}
+.network-menu-item.destructive:hover {
+  background-color: alpha(#ed8796, 0.15);
+}
+
+.network-switch slider {
+  background-color: #ffffff;
+}

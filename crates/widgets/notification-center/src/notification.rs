@@ -127,7 +127,7 @@ impl Notification {
                 return timeout as u64;
             }
             // timeout == 0 means server decides, timeout == -1 means never expire
-            if timeout == -1 {
+            if timeout == 0 {
                 return 0; // Never auto-dismiss
             }
         }

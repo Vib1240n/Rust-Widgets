@@ -365,6 +365,17 @@ switch slider {
   background: alpha(#292c30, 0.7);
 }
 
+/* GtkDropDown draws its own button inside .output-selector; keep it see-through
+   so the glass background above is what shows */
+.output-selector > button {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  min-height: 0;
+  color: inherit;
+}
+
 /* ===========================================================================
  * CONTROL-CENTER - Media Section
  * ===========================================================================*/

@@ -57,8 +57,6 @@ pub struct SectionsConfig {
     pub disk: bool,
     #[serde(default = "default_true")]
     pub battery: bool,
-    #[serde(default)]
-    pub network: bool,
     #[serde(default = "default_true")]
     pub temperatures: bool,
 }
@@ -79,8 +77,6 @@ pub struct TemperaturesConfig {
 pub struct AnimationConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
-    #[serde(default = "default_animation_type")]
-    pub r#type: String,
     #[serde(default = "default_direction")]
     pub direction: String,
     #[serde(default = "default_duration")]
@@ -121,9 +117,6 @@ fn default_warning_threshold() -> f32 {
 }
 fn default_critical_threshold() -> f32 {
     90.0
-}
-fn default_animation_type() -> String {
-    "slide".to_string()
 }
 fn default_direction() -> String {
     "down".to_string()
@@ -182,7 +175,6 @@ impl Default for SectionsConfig {
             memory: true,
             disk: true,
             battery: true,
-            network: false,
             temperatures: true,
         }
     }
@@ -203,7 +195,6 @@ impl Default for AnimationConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            r#type: default_animation_type(),
             direction: default_direction(),
             duration: default_duration(),
         }
@@ -245,7 +236,4 @@ impl Config {
         Self::config_dir().join("config.toml")
     }
 
-    pub fn style_path() -> PathBuf {
-        Self::config_dir().join("style.css")
-    }
 }

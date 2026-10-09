@@ -75,8 +75,6 @@ pub struct TogglesConfig {
     pub night_light: bool,
     #[serde(default)]
     pub vpn: bool,
-    #[serde(default)]
-    pub airplane: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -93,8 +91,6 @@ pub struct SlidersConfig {
 pub struct AnimationConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
-    #[serde(default = "default_animation_type")]
-    pub r#type: String,
     #[serde(default = "default_direction")]
     pub direction: String,
     #[serde(default = "default_duration")]
@@ -119,9 +115,6 @@ fn default_poll_interval() -> u64 {
 }
 fn default_true() -> bool {
     true
-}
-fn default_animation_type() -> String {
-    "slide".to_string()
 }
 fn default_direction() -> String {
     "down".to_string()
@@ -194,7 +187,6 @@ impl Default for TogglesConfig {
             caffeinate: true,
             night_light: true,
             vpn: false,
-            airplane: false,
         }
     }
 }
@@ -213,7 +205,6 @@ impl Default for AnimationConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            r#type: default_animation_type(),
             direction: default_direction(),
             duration: default_duration(),
         }
@@ -255,7 +246,4 @@ impl Config {
         Self::config_dir().join("config.toml")
     }
 
-    pub fn style_path() -> PathBuf {
-        Self::config_dir().join("style.css")
-    }
 }

@@ -184,15 +184,12 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
     let popup_manager_clone = popup_manager.clone();
     let panel_clone = panel.clone();
     let dnd_clone = dnd_enabled.clone();
-    let config_clone = config.clone();
 
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
         // Process DBus notifications
         while let Ok(event) = dbus_rx.try_recv() {
             match event {
-                NotificationEvent::Notify(mut notif) => {
-                    let id = notif.id;
-
+                NotificationEvent::Notify(notif) => {
                     // Store notification
                     store_clone.borrow_mut().insert(notif.clone());
 
@@ -216,9 +213,6 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
                         panel_clone.update(&store_clone.borrow());
                     }
                 }
-                NotificationEvent::GetCapabilities => {
-                    // Handled by DBus interface directly
-                }
             }
         }
         glib::ControlFlow::Continue
@@ -226,7 +220,6 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
 
     // Process popup actions
     let store_clone = store.clone();
-    let panel_clone = panel.clone();
     let dbus_response_tx_clone = dbus_response_tx.clone();
 
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
@@ -274,7 +267,6 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
     // Process panel actions
     let store_clone = store.clone();
     let panel_clone = panel.clone();
-    let dnd_clone = dnd_enabled.clone();
     let dbus_response_tx_clone = dbus_response_tx.clone();
 
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
@@ -307,10 +299,6 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
                 PanelAction::ActionInvoked(id, action_key) => {
                     let _ = dbus_response_tx_clone
                         .send(NotificationResponse::ActionInvoked { id, action_key });
-                }
-                PanelAction::ToggleDnd(enabled) => {
-                    *dnd_clone.borrow_mut() = enabled;
-                    tracing::info!("DND: {}", enabled);
                 }
                 PanelAction::OpenSettings => {
                     let config_path = Config::config_path();

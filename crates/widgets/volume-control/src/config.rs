@@ -9,8 +9,6 @@ pub struct Config {
     pub appearance: AppearanceConfig,
     #[serde(default)]
     pub behavior: BehaviorConfig,
-    #[serde(default)]
-    pub animation: AnimationConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -49,24 +47,8 @@ pub struct AppearanceConfig {
 pub struct BehaviorConfig {
     #[serde(default = "default_poll_interval")]
     pub poll_interval: u64,
-    #[serde(default = "default_true")]
-    pub close_on_escape: bool,
-    #[serde(default = "default_true")]
-    pub close_on_unfocus: bool,
     #[serde(default)]
     pub volume_override: bool,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct AnimationConfig {
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-    #[serde(default = "default_animation_type")]
-    pub r#type: String,
-    #[serde(default = "default_direction")]
-    pub direction: String,
-    #[serde(default = "default_duration")]
-    pub duration: u64,
 }
 
 fn default_anchor() -> String {
@@ -96,15 +78,6 @@ fn default_poll_interval() -> u64 {
 fn default_true() -> bool {
     true
 }
-fn default_animation_type() -> String {
-    "slide".to_string()
-}
-fn default_direction() -> String {
-    "up".to_string()
-}
-fn default_duration() -> u64 {
-    250
-}
 
 impl Default for Config {
     fn default() -> Self {
@@ -112,7 +85,6 @@ impl Default for Config {
             position: PositionConfig::default(),
             appearance: AppearanceConfig::default(),
             behavior: BehaviorConfig::default(),
-            animation: AnimationConfig::default(),
         }
     }
 }
@@ -147,20 +119,7 @@ impl Default for BehaviorConfig {
     fn default() -> Self {
         Self {
             poll_interval: default_poll_interval(),
-            close_on_escape: true,
-            close_on_unfocus: true,
             volume_override: false,
-        }
-    }
-}
-
-impl Default for AnimationConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            r#type: default_animation_type(),
-            direction: default_direction(),
-            duration: default_duration(),
         }
     }
 }
@@ -194,9 +153,5 @@ impl Config {
 
     pub fn config_path() -> PathBuf {
         Self::config_dir().join("config.toml")
-    }
-
-    pub fn style_path() -> PathBuf {
-        Self::config_dir().join("style.css")
     }
 }

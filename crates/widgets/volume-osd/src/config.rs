@@ -29,8 +29,6 @@ pub struct PositionConfig {
 pub struct AppearanceConfig {
     #[serde(default = "default_width")]
     pub width: i32,
-    #[serde(default = "default_height")]
-    pub height: i32,
     #[serde(default = "default_icon_size")]
     pub icon_size: i32,
     #[serde(default = "default_true")]
@@ -47,7 +45,6 @@ pub struct BehaviorConfig {
 fn default_anchor() -> String { "top-center".to_string() }
 fn default_margin_top() -> i32 { 50 }
 fn default_width() -> i32 { 200 }
-fn default_height() -> i32 { 48 }
 fn default_icon_size() -> i32 { 24 }
 fn default_timeout() -> u64 { 1500 }
 fn default_true() -> bool { true }
@@ -78,7 +75,6 @@ impl Default for AppearanceConfig {
     fn default() -> Self {
         Self {
             width: default_width(),
-            height: default_height(),
             icon_size: default_icon_size(),
             show_percentage: true,
         }

@@ -47,8 +47,6 @@ pub struct BehaviorConfig {
 pub struct AnimationConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
-    #[serde(default = "default_animation_type")]
-    pub r#type: String,
     #[serde(default = "default_direction")]
     pub direction: String,
     #[serde(default = "default_duration")]
@@ -72,9 +70,6 @@ fn default_poll_interval() -> u64 {
 }
 fn default_true() -> bool {
     true
-}
-fn default_animation_type() -> String {
-    "slide".to_string()
 }
 fn default_direction() -> String {
     "left".to_string()
@@ -128,7 +123,6 @@ impl Default for AnimationConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            r#type: default_animation_type(),
             direction: default_direction(),
             duration: default_duration(),
         }
@@ -166,7 +160,4 @@ impl Config {
         Self::config_dir().join("config.toml")
     }
 
-    pub fn style_path() -> PathBuf {
-        Self::config_dir().join("style.css")
-    }
 }

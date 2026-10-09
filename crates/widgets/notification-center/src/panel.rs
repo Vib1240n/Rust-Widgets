@@ -19,7 +19,6 @@ pub enum PanelAction {
     ClearAll,
     DismissOne(u32),
     ActionInvoked(u32, String),
-    ToggleDnd(bool),
     OpenSettings,
 }
 
@@ -451,7 +450,7 @@ impl NotificationPanel {
         let has_default = notification.actions.iter().any(|(a, _)| a == "default");
         let desktop_entry = notification.desktop_entry.clone();
         let app_name = notification.app_name.clone();
-        gesture.connect_released(move |gesture, _, _, _| {
+        gesture.connect_released(move |_, _, _, _| {
             if has_default {
                 let _ = action_tx.send(PanelAction::ActionInvoked(notif_id, "default".to_string()));
             } else {

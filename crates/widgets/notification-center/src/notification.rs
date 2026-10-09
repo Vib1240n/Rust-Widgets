@@ -1,7 +1,6 @@
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 /// Notification urgency level per freedesktop spec
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -145,8 +144,6 @@ impl Notification {
 pub struct NotificationStore {
     /// All notifications, keyed by ID
     notifications: HashMap<u32, Notification>,
-    /// Next notification ID
-    next_id: AtomicU32,
     /// Max notifications to keep
     max_history: usize,
 }
@@ -155,14 +152,8 @@ impl NotificationStore {
     pub fn new(max_history: usize) -> Self {
         Self {
             notifications: HashMap::new(),
-            next_id: AtomicU32::new(1),
             max_history,
         }
-    }
-
-    /// Generate next notification ID
-    pub fn next_id(&self) -> u32 {
-        self.next_id.fetch_add(1, Ordering::SeqCst)
     }
 
     /// Add or replace a notification
@@ -200,26 +191,9 @@ impl NotificationStore {
         notifs
     }
 
-    /// Get unread count
-    pub fn unread_count(&self) -> usize {
-        self.notifications.values().filter(|n| !n.dismissed).count()
-    }
-
-    /// Mark all as read
-    pub fn mark_all_read(&mut self) {
-        for n in self.notifications.values_mut() {
-            n.dismissed = true;
-        }
-    }
-
     /// Clear all notifications
     pub fn clear_all(&mut self) {
         self.notifications.clear();
-    }
-
-    /// Clear dismissed notifications only
-    pub fn clear_dismissed(&mut self) {
-        self.notifications.retain(|_, n| !n.dismissed);
     }
 
     /// Prune old notifications to stay under max_history

@@ -495,17 +495,6 @@ pub fn get_app_icon(app_name: &str) -> &'static str {
     }
 }
 
-// Clear saved volume for an app (useful if user wants to reset)
-pub fn clear_saved_volume(app_binary: &str) {
-    let mut saved = SAVED_APP_VOLUMES.lock().unwrap();
-    saved.remove(app_binary);
-}
-
-// Get all saved volumes (for debugging or UI display)
-pub fn get_saved_volumes() -> HashMap<String, f32> {
-    SAVED_APP_VOLUMES.lock().unwrap().clone()
-}
-
 /// Initialize the volume watcher and load current stream volumes into memory.
 /// Call this once at widget startup to protect against volume spikes from the beginning.
 pub fn init_volume_persistence() {

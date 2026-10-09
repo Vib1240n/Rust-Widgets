@@ -1,0 +1,24 @@
+# Let input devices behind the Anker TB5 dock wake the laptop from s2idle.
+#
+# USB remote wakeup has to be enabled on EVERY hub between the device and the
+# laptop, not just on the keyboard. The kernel enables it on most keyboards
+# (the DOIO already was) but leaves hubs disabled, so the wake signal died at
+# the dock's first hub. Install: /etc/udev/rules.d/71-dock-wake.rules
+#
+# The Thunderbolt/USB4 side (wake on dock plug-in) is handled separately by
+# /etc/tmpfiles.d/usb4-wake.conf.
+
+# All USB hubs (device class 09), including the dock's internal hub chain
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{bDeviceClass}=="09", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+
+# DOIO KB16 macropad
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="d010", ATTR{idProduct}=="1601", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+
+# QK80 MK2 wired
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="514b", ATTR{idProduct}=="4d02", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+
+# QK80 MK2 2.4G dongle
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="5448", ATTR{idProduct}=="4245", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"
+
+# Logitech USB receiver (mouse). Not the PRO X 2 headset (046d:0af7).
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="046d", ATTR{idProduct}=="c54f", TEST=="power/wakeup", ATTR{power/wakeup}="enabled"

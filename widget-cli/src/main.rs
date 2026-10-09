@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::os::unix::net::UnixStream;
 use std::process::{Command, Stdio};
 
@@ -134,10 +134,18 @@ const WIDGETS: &[WidgetInfo] = &[
     },
     WidgetInfo {
         name: "brightness",
-        binary: "rw-brightness",
-        description: "Brightness OSD [not implemented]",
+        binary: "rw-brightness-osd",
+        description: "Brightness OSD (daemon)",
         is_daemon: true,
-        socket_path: Some("/tmp/rw-brightness.sock"),
+        socket_path: Some("/tmp/rw-brightness-osd.sock"),
+        supports_sighup: false,
+    },
+    WidgetInfo {
+        name: "dock",
+        binary: "rw-dock",
+        description: "Dock mode: lid + monitor aware panel switching",
+        is_daemon: true,
+        socket_path: Some("/tmp/rw-dock.sock"),
         supports_sighup: false,
     },
     WidgetInfo {
@@ -174,6 +182,7 @@ fn get_widget_info(widget: &str) -> Option<&'static WidgetInfo> {
         "media-player" | "player" => WIDGETS.iter().find(|w| w.name == "media"),
         "network-menu" | "wifi" | "net" => WIDGETS.iter().find(|w| w.name == "network"),
         "brightness-osd" => WIDGETS.iter().find(|w| w.name == "brightness"),
+        "dock-mode" => WIDGETS.iter().find(|w| w.name == "dock"),
         "power-menu" => WIDGETS.iter().find(|w| w.name == "power"),
         _ => None,
     }
@@ -221,7 +230,38 @@ fn send_daemon_command(socket_path: &str, command: &str) -> Result<(), String> {
     Ok(())
 }
 
+/// Daemons installed as systemd user units (~/.config/systemd/user/<binary>.service)
+/// are started/stopped through systemctl, so crash-restart and journald logs stay with systemd.
+fn unit_name(info: &WidgetInfo) -> Option<String> {
+    if !info.is_daemon {
+        return None;
+    }
+    let unit = format!("{}.service", info.binary);
+    dirs::config_dir()?
+        .join("systemd/user")
+        .join(&unit)
+        .exists()
+        .then_some(unit)
+}
+
+fn systemctl(verb: &str, unit: &str) -> bool {
+    Command::new("systemctl")
+        .args(["--user", verb, unit])
+        .status()
+        .is_ok_and(|s| s.success())
+}
+
 fn start_widget(info: &WidgetInfo) {
+    if let Some(unit) = unit_name(info) {
+        if systemctl("start", &unit) {
+            println!("Started {} ({})", info.name, unit);
+        } else {
+            eprintln!("Failed to start {} ({}), see: journalctl --user -u {}", info.name, unit, unit);
+            std::process::exit(1);
+        }
+        return;
+    }
+
     match Command::new("setsid")
         .arg("-f")
         .arg(info.binary)
@@ -239,6 +279,11 @@ fn start_widget(info: &WidgetInfo) {
 }
 
 fn kill_widget(info: &WidgetInfo) -> bool {
+    if let Some(unit) = unit_name(info) {
+        let was_running = is_widget_running(info.binary);
+        return systemctl("stop", &unit) && was_running;
+    }
+
     if let Some(pid) = get_widget_pid(info.binary) {
         match Command::new("kill").arg(pid.to_string()).status() {
             Ok(status) if status.success() => {
@@ -504,6 +549,8 @@ fn list_widgets() {
     println!("  osd -> volume-osd");
     println!("  player, media-player -> media");
     println!("  wifi, net, network-menu -> network");
+    println!("  brightness-osd -> brightness");
+    println!("  dock-mode -> dock");
 }
 
 fn print_stats() {
@@ -571,6 +618,8 @@ fn show_config_path(widget: Option<String>) {
                 "notifications" | "notification-center" | "nc" => "notification-center",
                 "media" | "media-player" | "player" => "media-player",
                 "network" | "network-menu" | "wifi" | "net" => "network-menu",
+                "brightness" | "brightness-osd" => "brightness-osd",
+                "dock" | "dock-mode" => "dock-mode",
                 _ => &w,
             };
             let widget_dir = base.join(config_name);
@@ -589,6 +638,8 @@ fn show_config_path(widget: Option<String>) {
                     "volume" => "volume-control",
                     "media" => "media-player",
                     "network" => "network-menu",
+                    "brightness" => "brightness-osd",
+                    "dock" => "dock-mode",
                     _ => info.name,
                 };
                 println!("  {}/{}/config.toml", base.display(), config_name);

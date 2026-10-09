@@ -193,9 +193,6 @@ fn build_ui(app: &Application) {
     });
     window.add_controller(controller);
 
-    // Poll for volume changes
-    let master_vol_ref = Rc::new(RefCell::new(None::<(Scale, Label, Button)>));
-
     window.present();
 }
 

@@ -1,9 +1,8 @@
 use crate::config::Config;
 use gtk4::prelude::*;
-use gtk4::{Box, ComboBoxText, Label, Orientation, Scale};
+use gtk4::{Box, DropDown, Label, Orientation, Scale};
 use std::cell::RefCell;
 use std::process::Command;
-use std::rc::Rc;
 
 thread_local! {
     static VOLUME_SCALE: RefCell<Option<Scale>> = RefCell::new(None);
@@ -90,27 +89,28 @@ fn create_brightness_slider() -> (Box, Scale, Label) {
     (row, scale_clone, label)
 }
 
-fn create_output_selector() -> ComboBoxText {
-    let combo = ComboBoxText::new();
-    combo.add_css_class("output-selector");
-
+/// Audio output picker. GtkDropDown + StringList replaces ComboBoxText (deprecated in GTK 4.10).
+fn create_output_selector() -> DropDown {
     let outputs = get_audio_outputs();
     let current = get_current_output();
 
-    for (i, (id, name)) in outputs.iter().enumerate() {
-        combo.append(Some(id), name);
-        if id == &current {
-            combo.set_active(Some(i as u32));
-        }
+    let names: Vec<&str> = outputs.iter().map(|(_, name)| name.as_str()).collect();
+    let dropdown = DropDown::from_strings(&names);
+    dropdown.add_css_class("output-selector");
+
+    // Select the current sink before connecting the handler so startup doesn't re-set it
+    if let Some(i) = outputs.iter().position(|(id, _)| id == &current) {
+        dropdown.set_selected(i as u32);
     }
 
-    combo.connect_changed(|c| {
-        if let Some(id) = c.active_id() {
-            set_audio_output(&id);
+    let ids: Vec<String> = outputs.into_iter().map(|(id, _)| id).collect();
+    dropdown.connect_selected_notify(move |d| {
+        if let Some(id) = ids.get(d.selected() as usize) {
+            set_audio_output(id);
         }
     });
 
-    combo
+    dropdown
 }
 
 pub fn update(_config: &Config) {

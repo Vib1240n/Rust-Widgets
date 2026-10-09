@@ -54,6 +54,12 @@ impl PopupManager {
 
     /// Show a popup for a notification
     pub fn show(&self, notification: &Notification) {
+        // replaces_id: this notification is already on screen, update it in place
+        if self.popups.borrow().contains_key(&notification.id) {
+            self.update(notification);
+            return;
+        }
+
         let id = notification.id;
 
         // Check if we're at max popups
@@ -87,70 +93,12 @@ impl PopupManager {
         window.set_margin(Edge::Top, margin_top);
         window.set_margin(Edge::Right, self.config.popup.margin);
 
-        // ==================== OUTER WRAPPER (for blur corner fix) ====================
-        let outer_wrapper = Box::new(Orientation::Vertical, 0);
-        outer_wrapper.set_margin_start(16);
-        outer_wrapper.set_margin_end(16);
-        outer_wrapper.set_margin_top(16);
-        outer_wrapper.set_margin_bottom(16);
-
-        // Build content - returns (content_box, close_button)
-        let (content, close_btn) = self.build_popup_content(notification);
-        outer_wrapper.append(&content);
-        window.set_child(Some(&outer_wrapper));
-
-        // Shared state for close button
+        // Shared state: measured height (for stacking) and auto-dismiss handle
         let popup_height: Rc<Cell<i32>> = Rc::new(Cell::new(estimated_height));
         let timeout_source: Rc<RefCell<Option<glib::SourceId>>> = Rc::new(RefCell::new(None));
 
-        // Wire up close button BEFORE storing popup
-        {
-            let popups = self.popups.clone();
-            let stack_offset = self.stack_offset.clone();
-            let action_tx = self.action_tx.clone();
-            let gap = self.config.popup.gap;
-            let window_clone = window.clone();
-            let height_clone = popup_height.clone();
-            let timeout_clone = timeout_source.clone();
-
-            close_btn.connect_clicked(move |_| {
-                // Cancel timeout if any
-                if let Some(source) = timeout_clone.borrow_mut().take() {
-                    source.remove();
-                }
-                // Update stack offset
-                let h = height_clone.get();
-                stack_offset.set((stack_offset.get() - h - gap).max(0));
-                // Remove from hashmap
-                popups.borrow_mut().remove(&id);
-                // Close window
-                window_clone.close();
-                // Notify
-                let _ = action_tx.send(PopupAction::Dismissed(id));
-            });
-        }
-
-        // Click gesture on CONTENT (not window) to allow button clicks
-        let gesture = GestureClick::new();
-        let action_tx = self.action_tx.clone();
-        let notif_id = id;
-        let has_default = notification.actions.iter().any(|(a, _)| a == "default");
-        let popup_width = self.config.appearance.popup_width;
-
-        gesture.connect_released(move |_, _, x, _| {
-            // Skip if click is in close button area (top-right corner)
-            // Close button is roughly 32px from right edge
-            if x > (popup_width - 50) as f64 {
-                return;
-            }
-
-            if has_default {
-                let _ = action_tx.send(PopupAction::ActionInvoked(notif_id, "default".to_string()));
-            } else {
-                let _ = action_tx.send(PopupAction::Clicked(notif_id));
-            }
-        });
-        content.add_controller(gesture);
+        // Content + close button + click gesture + auto-dismiss timeout
+        self.fill_window(&window, notification, &popup_height, &timeout_source);
 
         window.present();
 
@@ -159,7 +107,6 @@ impl PopupManager {
             let window_clone = window.clone();
             let height_clone = popup_height.clone();
             let stack_offset = self.stack_offset.clone();
-            let gap = self.config.popup.gap;
 
             glib::idle_add_local_once(move || {
                 let actual_height = window_clone.height().max(80);
@@ -177,30 +124,6 @@ impl PopupManager {
         // Update stack offset with estimate (will be corrected above)
         self.stack_offset
             .set(self.stack_offset.get() + estimated_height + self.config.popup.gap);
-
-        // Setup auto-dismiss timeout
-        let timeout = notification.get_timeout(&self.config.popup);
-        if timeout > 0 {
-            let popups = self.popups.clone();
-            let stack_offset = self.stack_offset.clone();
-            let action_tx = self.action_tx.clone();
-            let gap = self.config.popup.gap;
-            let height_for_timeout = popup_height.clone();
-            let timeout_for_clear = timeout_source.clone();
-
-            let source = glib::timeout_add_local_once(Duration::from_millis(timeout), move || {
-                // Clear timeout reference
-                timeout_for_clear.borrow_mut().take();
-
-                if let Some(popup) = popups.borrow_mut().remove(&id) {
-                    let h = height_for_timeout.get();
-                    stack_offset.set((stack_offset.get() - h - gap).max(0));
-                    popup.window.close();
-                    let _ = action_tx.send(PopupAction::Dismissed(id));
-                }
-            });
-            *timeout_source.borrow_mut() = Some(source);
-        }
 
         // Animate in
         if self.config.animation.enabled {
@@ -250,10 +173,130 @@ impl PopupManager {
         }
     }
 
-    /// Replace a popup (for replaces_id)
-    pub fn replace(&self, notification: &Notification) {
-        self.dismiss(notification.id);
-        self.show(notification);
+    /// replaces_id: swap the content of the popup already on screen, keep its slot in
+    /// the stack and restart its auto-dismiss timer. No slide-out/slide-in, so
+    /// progress/volume/media updates don't flicker or reshuffle the stack.
+    fn update(&self, notification: &Notification) {
+        let id = notification.id;
+        let (window, height, timeout_source) = match self.popups.borrow().get(&id) {
+            Some(p) => (p.window.clone(), p.height.clone(), p.timeout_source.clone()),
+            None => return,
+        };
+
+        // Old timer belongs to the old content
+        if let Some(source) = timeout_source.borrow_mut().take() {
+            source.remove();
+        }
+
+        self.fill_window(&window, notification, &height, &timeout_source);
+
+        // New content can be taller/shorter: re-measure and shift the stack by the difference
+        let stack_offset = self.stack_offset.clone();
+        glib::idle_add_local_once(move || {
+            let new_height = window.height().max(80);
+            let diff = new_height - height.get();
+            height.set(new_height);
+            if diff != 0 {
+                stack_offset.set(stack_offset.get() + diff);
+            }
+        });
+    }
+
+    /// Build a notification's content into `window` and wire its close button,
+    /// click gesture and auto-dismiss timeout. Shared by `show` (new window) and
+    /// `update` (replaces_id, same window).
+    fn fill_window(
+        &self,
+        window: &gtk4::Window,
+        notification: &Notification,
+        popup_height: &Rc<Cell<i32>>,
+        timeout_source: &Rc<RefCell<Option<glib::SourceId>>>,
+    ) {
+        let id = notification.id;
+
+        // ==================== OUTER WRAPPER (for blur corner fix) ====================
+        let outer_wrapper = Box::new(Orientation::Vertical, 0);
+        outer_wrapper.set_margin_start(16);
+        outer_wrapper.set_margin_end(16);
+        outer_wrapper.set_margin_top(16);
+        outer_wrapper.set_margin_bottom(16);
+
+        // Build content - returns (content_box, close_button)
+        let (content, close_btn) = self.build_popup_content(notification);
+        outer_wrapper.append(&content);
+        window.set_child(Some(&outer_wrapper));
+
+        // Close button
+        {
+            let popups = self.popups.clone();
+            let stack_offset = self.stack_offset.clone();
+            let action_tx = self.action_tx.clone();
+            let gap = self.config.popup.gap;
+            let window_clone = window.clone();
+            let height_clone = popup_height.clone();
+            let timeout_clone = timeout_source.clone();
+
+            close_btn.connect_clicked(move |_| {
+                // Cancel timeout if any
+                if let Some(source) = timeout_clone.borrow_mut().take() {
+                    source.remove();
+                }
+                // Update stack offset
+                let h = height_clone.get();
+                stack_offset.set((stack_offset.get() - h - gap).max(0));
+                // Remove from hashmap
+                popups.borrow_mut().remove(&id);
+                // Close window
+                window_clone.close();
+                // Notify
+                let _ = action_tx.send(PopupAction::Dismissed(id));
+            });
+        }
+
+        // Click gesture on CONTENT (not window) to allow button clicks
+        let gesture = GestureClick::new();
+        let action_tx = self.action_tx.clone();
+        let has_default = notification.actions.iter().any(|(a, _)| a == "default");
+        let popup_width = self.config.appearance.popup_width;
+
+        gesture.connect_released(move |_, _, x, _| {
+            // Skip if click is in close button area (top-right corner)
+            // Close button is roughly 32px from right edge
+            if x > (popup_width - 50) as f64 {
+                return;
+            }
+
+            if has_default {
+                let _ = action_tx.send(PopupAction::ActionInvoked(id, "default".to_string()));
+            } else {
+                let _ = action_tx.send(PopupAction::Clicked(id));
+            }
+        });
+        content.add_controller(gesture);
+
+        // Auto-dismiss timeout
+        let timeout = notification.get_timeout(&self.config.popup);
+        if timeout > 0 {
+            let popups = self.popups.clone();
+            let stack_offset = self.stack_offset.clone();
+            let action_tx = self.action_tx.clone();
+            let gap = self.config.popup.gap;
+            let height_for_timeout = popup_height.clone();
+            let timeout_for_clear = timeout_source.clone();
+
+            let source = glib::timeout_add_local_once(Duration::from_millis(timeout), move || {
+                // Clear timeout reference
+                timeout_for_clear.borrow_mut().take();
+
+                if let Some(popup) = popups.borrow_mut().remove(&id) {
+                    let h = height_for_timeout.get();
+                    stack_offset.set((stack_offset.get() - h - gap).max(0));
+                    popup.window.close();
+                    let _ = action_tx.send(PopupAction::Dismissed(id));
+                }
+            });
+            *timeout_source.borrow_mut() = Some(source);
+        }
     }
 
     fn get_oldest_popup_id(&self) -> Option<u32> {
@@ -315,8 +358,8 @@ impl PopupManager {
             img.add_css_class("popup-image");
             content.append(&img);
         } else if let Some(ref img_data) = notification.image_data {
-            if let Some(pixbuf) = image_data_to_pixbuf(img_data) {
-                let img = Image::from_pixbuf(Some(&pixbuf));
+            if let Some(texture) = image_data_to_texture(img_data) {
+                let img = Image::from_paintable(Some(&texture));
                 img.set_pixel_size(48);
                 img.add_css_class("popup-image");
                 content.append(&img);
@@ -388,9 +431,16 @@ impl PopupManager {
     }
 }
 
-/// Convert notification image data to GDK pixbuf
-fn image_data_to_pixbuf(data: &crate::notification::ImageData) -> Option<gtk4::gdk_pixbuf::Pixbuf> {
-    if data.width <= 0 || data.height <= 0 || data.rowstride <= 0 || data.data.is_empty() {
+/// Raw freedesktop `image-data` (8-bit RGB/RGBA rows) -> GPU texture.
+/// MemoryTexture replaces the Pixbuf path (Image::from_pixbuf deprecated 4.12,
+/// Texture::for_pixbuf deprecated 4.20).
+fn image_data_to_texture(data: &crate::notification::ImageData) -> Option<gtk4::gdk::Texture> {
+    if data.width <= 0
+        || data.height <= 0
+        || data.rowstride <= 0
+        || data.bits_per_sample != 8
+        || data.data.is_empty()
+    {
         return None;
     }
 
@@ -399,15 +449,20 @@ fn image_data_to_pixbuf(data: &crate::notification::ImageData) -> Option<gtk4::g
         return None;
     }
 
-    Some(gtk4::gdk_pixbuf::Pixbuf::from_bytes(
-        &glib::Bytes::from(&data.data),
-        gtk4::gdk_pixbuf::Colorspace::Rgb,
-        data.has_alpha,
-        data.bits_per_sample,
+    let format = if data.has_alpha {
+        gtk4::gdk::MemoryFormat::R8g8b8a8
+    } else {
+        gtk4::gdk::MemoryFormat::R8g8b8
+    };
+
+    let texture = gtk4::gdk::MemoryTexture::new(
         data.width,
         data.height,
-        data.rowstride,
-    ))
+        format,
+        &glib::Bytes::from(&data.data),
+        data.rowstride as usize,
+    );
+    Some(texture.upcast())
 }
 
 /// Strip basic HTML/pango markup from notification body

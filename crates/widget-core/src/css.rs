@@ -25,7 +25,7 @@ pub fn load_css(path: &Path) {
 /// Load CSS from a string
 pub fn load_css_string(css: &str) {
     let provider = CssProvider::new();
-    provider.load_from_data(css);
+    provider.load_from_string(css);
 
     gtk4::style_context_add_provider_for_display(
         &Display::default().expect("Could not get default display"),

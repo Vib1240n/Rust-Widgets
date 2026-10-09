@@ -3,7 +3,6 @@ mod config;
 mod css;
 
 use config::Config;
-use gtk4::gdk_pixbuf::Pixbuf;
 use gtk4::gio::Cancellable;
 use gtk4::glib;
 use gtk4::prelude::*;
@@ -113,10 +112,6 @@ fn get_players() -> Vec<Player> {
     });
 
     players
-}
-
-fn get_active_player(players: &[Player]) -> Option<String> {
-    players.first().map(|p| p.name.clone())
 }
 
 fn build_ui(app: &Application) {
@@ -341,7 +336,6 @@ fn build_ui(app: &Application) {
         &players_update.borrow(),
         *current_idx_update.borrow(),
         current_idx.clone(),
-        players.clone(),
     );
 
     if let Some(player) = players.borrow().first() {
@@ -379,7 +373,6 @@ fn build_ui(app: &Application) {
             &new_players,
             *current_idx_update.borrow(),
             current_idx_update.clone(),
-            players_update.clone(),
         );
 
         // Update media info for current player
@@ -448,6 +441,7 @@ fn build_ui(app: &Application) {
         let direction = match config.animation.direction.as_str() {
             "up" => animation::Direction::Up,
             "left" => animation::Direction::Left,
+            "right" => animation::Direction::Right,
             _ => animation::Direction::Down,
         };
         animation::slide_in(
@@ -464,7 +458,6 @@ fn update_player_selector(
     players: &[Player],
     current_idx: usize,
     idx_rc: Rc<RefCell<usize>>,
-    players_rc: Rc<RefCell<Vec<Player>>>,
 ) {
     // Clear existing dots
     while let Some(child) = selector_box.first_child() {
@@ -553,6 +546,7 @@ fn close_with_animation(window: &gtk4::ApplicationWindow, anim_config: &config::
         let direction = match anim_config.direction.as_str() {
             "down" => animation::Direction::Up,
             "left" => animation::Direction::Left,
+            "right" => animation::Direction::Right,
             _ => animation::Direction::Down,
         };
         let w = window.clone();
@@ -655,26 +649,26 @@ fn update_media_info(
     }
 }
 
+/// Album art straight into a GdkTexture (Picture::set_pixbuf deprecated 4.12,
+/// Texture::for_pixbuf deprecated 4.20). GTK decodes png/jpeg/tiff itself and
+/// falls back to gdk-pixbuf loaders for other formats.
 fn load_album_art(picture: &Picture, url: &str) {
     if url.starts_with("file://") {
         let path = url.strip_prefix("file://").unwrap_or(url);
-        if let Ok(pixbuf) = Pixbuf::from_file(path) {
-            picture.set_pixbuf(Some(&pixbuf));
+        if let Ok(texture) = gtk4::gdk::Texture::from_filename(path) {
+            picture.set_paintable(Some(&texture));
         }
     } else if url.starts_with("http://") || url.starts_with("https://") {
         let file = gtk4::gio::File::for_uri(url);
         let picture = picture.clone();
-        file.read_async(
-            glib::Priority::DEFAULT,
-            None::<&Cancellable>,
-            move |result| {
-                if let Ok(stream) = result {
-                    if let Ok(pixbuf) = Pixbuf::from_stream(&stream, None::<&Cancellable>) {
-                        picture.set_pixbuf(Some(&pixbuf));
-                    }
+        file.load_contents_async(None::<&Cancellable>, move |result| {
+            if let Ok((data, _etag)) = result {
+                let bytes = glib::Bytes::from_owned(data.to_vec());
+                if let Ok(texture) = gtk4::gdk::Texture::from_bytes(&bytes) {
+                    picture.set_paintable(Some(&texture));
                 }
-            },
-        );
+            }
+        });
     }
 }
 

@@ -38,9 +38,6 @@ pub struct AppearanceConfig {
     /// Width of popup notifications
     #[serde(default = "default_popup_width")]
     pub popup_width: i32,
-    /// Max height of notification center
-    #[serde(default = "default_max_height")]
-    pub max_height: i32,
     /// Max notifications to keep in history
     #[serde(default = "default_max_history")]
     pub max_history: usize,
@@ -55,19 +52,10 @@ pub struct BehaviorConfig {
     /// Whether DND mode is enabled by default
     #[serde(default)]
     pub dnd_enabled: bool,
-    /// Enable notification sounds
-    #[serde(default = "default_true")]
-    pub play_sounds: bool,
-    /// Command for critical notifications
-    #[serde(default)]
-    pub critical_sound: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct PopupConfig {
-    /// Anchor for popup notifications (typically top-right)
-    #[serde(default = "default_popup_anchor")]
-    pub anchor: String,
     /// Margin from screen edge
     #[serde(default = "default_popup_margin")]
     pub margin: i32,
@@ -92,19 +80,12 @@ pub struct PopupConfig {
 pub struct AnimationConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
-    #[serde(default = "default_animation_type")]
-    pub r#type: String,
-    #[serde(default = "default_direction")]
-    pub direction: String,
     #[serde(default = "default_duration")]
     pub duration: u64,
 }
 
 // Defaults
 fn default_anchor() -> String {
-    "top-right".to_string()
-}
-fn default_popup_anchor() -> String {
     "top-right".to_string()
 }
 fn default_margin_top() -> i32 {
@@ -118,9 +99,6 @@ fn default_panel_width() -> i32 {
 }
 fn default_popup_width() -> i32 {
     360
-}
-fn default_max_height() -> i32 {
-    600
 }
 fn default_max_history() -> usize {
     50
@@ -145,12 +123,6 @@ fn default_max_popups() -> usize {
 }
 fn default_true() -> bool {
     true
-}
-fn default_animation_type() -> String {
-    "slide".to_string()
-}
-fn default_direction() -> String {
-    "down".to_string()
 }
 fn default_duration() -> u64 {
     200
@@ -185,7 +157,6 @@ impl Default for AppearanceConfig {
         Self {
             panel_width: default_panel_width(),
             popup_width: default_popup_width(),
-            max_height: default_max_height(),
             max_history: default_max_history(),
         }
     }
@@ -197,8 +168,6 @@ impl Default for BehaviorConfig {
             close_on_escape: true,
             close_on_unfocus: true,
             dnd_enabled: false,
-            play_sounds: true,
-            critical_sound: None,
         }
     }
 }
@@ -206,7 +175,6 @@ impl Default for BehaviorConfig {
 impl Default for PopupConfig {
     fn default() -> Self {
         Self {
-            anchor: default_popup_anchor(),
             margin: default_popup_margin(),
             gap: default_popup_gap(),
             timeout_low: default_timeout_low(),
@@ -221,8 +189,6 @@ impl Default for AnimationConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            r#type: default_animation_type(),
-            direction: default_direction(),
             duration: default_duration(),
         }
     }
@@ -261,9 +227,5 @@ impl Config {
 
     pub fn config_path() -> PathBuf {
         Self::config_dir().join("config.toml")
-    }
-
-    pub fn style_path() -> PathBuf {
-        Self::config_dir().join("style.css")
     }
 }

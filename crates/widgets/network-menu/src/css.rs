@@ -10,7 +10,7 @@ pub fn load() {
     let display = gtk4::gdk::Display::default().expect("Could not get default display");
 
     let default_provider = CssProvider::new();
-    default_provider.load_from_data(DEFAULT_STYLE);
+    default_provider.load_from_string(DEFAULT_STYLE);
     gtk4::style_context_add_provider_for_display(
         &display,
         &default_provider,

@@ -21,7 +21,6 @@ pub enum ConnType {
 pub struct NetworkStatus {
     pub wifi_enabled: bool,
     pub conn_type: ConnType,
-    pub connected: bool,
     pub name: String,
 }
 
@@ -101,7 +100,6 @@ pub fn get_status() -> NetworkStatus {
         return NetworkStatus {
             wifi_enabled: wifi_on,
             conn_type: ConnType::Ethernet,
-            connected: true,
             name: dev,
         };
     }
@@ -109,14 +107,12 @@ pub fn get_status() -> NetworkStatus {
         return NetworkStatus {
             wifi_enabled: wifi_on,
             conn_type: ConnType::Wifi,
-            connected: true,
             name: conn,
         };
     }
     NetworkStatus {
         wifi_enabled: wifi_on,
         conn_type: ConnType::None,
-        connected: false,
         name: "Not connected".to_string(),
     }
 }

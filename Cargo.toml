@@ -10,7 +10,8 @@ members = [
     "crates/widgets/volume-osd",
     "crates/widgets/brightness-osd",
     "crates/widgets/notification-center",
-     "crates/widgets/network-menu",
+    "crates/widgets/network-menu",
+    "crates/widgets/dock-mode",
     "widget-cli",
 ]
 
@@ -21,7 +22,7 @@ authors = ["vib1240n"]
 license = "MIT"
 
 [workspace.dependencies]
-gtk4 = "0.9"
+gtk4 = { version = "0.9", features = ["v4_12"] }
 gtk4-layer-shell = "0.4"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time"] }
 serde = { version = "1", features = ["derive"] }

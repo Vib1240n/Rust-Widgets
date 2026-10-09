@@ -26,8 +26,6 @@ pub struct BluetoothPanel {
     pub container: Box,
     device_list: ListBox,
     scanning_spinner: Spinner,
-    scan_button: Button,
-    is_scanning: Rc<RefCell<bool>>,
     devices: Rc<RefCell<HashMap<String, BluetoothDevice>>>,
 }
 
@@ -113,8 +111,6 @@ impl BluetoothPanel {
             container,
             device_list,
             scanning_spinner,
-            scan_button: scan_button.clone(),
-            is_scanning: is_scanning.clone(),
             devices: devices.clone(),
         };
 

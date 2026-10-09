@@ -13,8 +13,6 @@ pub enum NotificationEvent {
     Notify(Notification),
     /// Close notification request
     Close(u32),
-    /// Get capabilities query
-    GetCapabilities,
 }
 
 /// Events sent from UI back to DBus for signals
@@ -222,7 +220,8 @@ fn parse_image_data(value: &OwnedValue) -> Option<ImageData> {
     None
 }
 
-/// Close reasons per spec
+/// Close reasons per spec (full set kept for reference; only DISMISSED is emitted today)
+#[allow(dead_code)]
 pub mod close_reason {
     pub const EXPIRED: u32 = 1;
     pub const DISMISSED: u32 = 2;
@@ -242,7 +241,6 @@ pub async fn start_server(
     conn.request_name("org.freedesktop.Notifications").await?;
 
     // Register the interface
-    let server_clone = server.clone();
     conn.object_server()
         .at("/org/freedesktop/Notifications", NotificationServer::new(server.event_tx.clone()))
         .await?;

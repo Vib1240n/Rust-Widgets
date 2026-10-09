@@ -33,13 +33,15 @@ declare -A WIDGETS=(
     ["volume-osd"]="rw-volume-osd:volume-osd:volume-osd"
     ["notifications"]="rw-notifications:notification-center:notification-center"
     ["network"]="rw-network:network-menu:network-menu"
+    ["brightness-osd"]="rw-brightness-osd:brightness-osd:brightness-osd"
+    ["dock"]="rw-dock:dock-mode:dock-mode"
 )
 
 # Parse arguments
 SELECTED_WIDGETS=()
 if [ $# -eq 0 ]; then
     # No args = install all
-    SELECTED_WIDGETS=("stats" "control" "media" "volume" "volume-osd" "notifications" "network")
+    SELECTED_WIDGETS=("stats" "control" "media" "volume" "volume-osd" "notifications" "network" "brightness-osd" "dock")
     BUILD_ALL=true
 else
     for arg in "$@"; do
@@ -52,9 +54,11 @@ else
             volume-osd|osd) SELECTED_WIDGETS+=("volume-osd") ;;
             notifications|notification-center|nc) SELECTED_WIDGETS+=("notifications") ;;
             network|network-menu|wifi) SELECTED_WIDGETS+=("network") ;;
+            brightness|brightness-osd) SELECTED_WIDGETS+=("brightness-osd") ;;
+            dock|dock-mode) SELECTED_WIDGETS+=("dock") ;;
             *)
                 echo -e "${YELLOW}Unknown widget: $arg${NC}"
-                echo "Available: stats, control, media, volume, volume-osd, notifications, network"
+                echo "Available: stats, control, media, volume, volume-osd, notifications, network, brightness-osd, dock"
                 exit 1
                 ;;
         esac
@@ -97,6 +101,24 @@ for widget in "${SELECTED_WIDGETS[@]}"; do
         echo -e "  ${GREEN}$binary${NC}"
     fi
 done
+
+# systemd user units for daemons (crash-restart + journald logs).
+# try-restart only restarts units that are already running, so a rebuild
+# picks up new binaries without starting anything new.
+UNIT_DIR="$HOME/.config/systemd/user"
+if compgen -G "systemd/*.service" > /dev/null; then
+    echo -e "${BLUE}Installing systemd user units to $UNIT_DIR...${NC}"
+    mkdir -p "$UNIT_DIR"
+    for u in systemd/*.service systemd/*.target; do
+        [ -e "$u" ] || continue
+        cp "$u" "$UNIT_DIR/"
+        echo -e "  ${GREEN}$(basename "$u")${NC}"
+    done
+    systemctl --user daemon-reload
+    for u in systemd/*.service; do
+        systemctl --user try-restart "$(basename "$u")" || true
+    done
+fi
 
 # Create configs for selected widgets
 echo -e "${BLUE}Creating config directories...${NC}"

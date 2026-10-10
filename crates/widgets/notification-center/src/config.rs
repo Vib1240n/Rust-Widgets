@@ -13,6 +13,27 @@ pub struct Config {
     pub popup: PopupConfig,
     #[serde(default)]
     pub animation: AnimationConfig,
+    #[serde(default)]
+    pub weather: WeatherConfig,
+}
+
+/// Date card weather (wttr.in; fetched only when the panel opens, at most
+/// every `refresh_minutes`)
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct WeatherConfig {
+    pub enabled: bool,
+    /// City / airport / "lat,lon"; empty = wttr.in locates by IP
+    pub location: String,
+    /// "metric" (°C), "imperial" (°F) or "auto" (wttr.in decides by region)
+    pub units: String,
+    pub refresh_minutes: u64,
+}
+
+impl Default for WeatherConfig {
+    fn default() -> Self {
+        Self { enabled: true, location: String::new(), units: "auto".into(), refresh_minutes: 30 }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -136,6 +157,7 @@ impl Default for Config {
             behavior: BehaviorConfig::default(),
             popup: PopupConfig::default(),
             animation: AnimationConfig::default(),
+            weather: WeatherConfig::default(),
         }
     }
 }

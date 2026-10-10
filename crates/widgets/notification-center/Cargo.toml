@@ -10,6 +10,7 @@ name = "rw-notifications"
 path = "src/main.rs"
 
 [dependencies]
+widget-core = { path = "../../widget-core" }
 gtk4.workspace = true
 gtk4-layer-shell.workspace = true
 tokio.workspace = true

@@ -118,6 +118,27 @@ impl Notification {
         }
     }
 
+    /// Compact age for cards: "Now", "2 min", "1 hr", "Yesterday", "Mon 14:05"
+    pub fn short_age(&self) -> String {
+        let now = Local::now();
+        let d = now.signed_duration_since(self.timestamp);
+        if d.num_seconds() < 60 {
+            "Now".into()
+        } else if d.num_minutes() < 60 {
+            format!("{} min", d.num_minutes())
+        } else if d.num_hours() < 24 && self.timestamp.date_naive() == now.date_naive() {
+            format!("{} hr", d.num_hours())
+        } else if self.timestamp.date_naive() == (now - chrono::Duration::days(1)).date_naive() {
+            "Yesterday".into()
+        } else {
+            self.timestamp.format("%a %H:%M").to_string()
+        }
+    }
+
+    pub fn is_today(&self) -> bool {
+        self.timestamp.date_naive() == Local::now().date_naive()
+    }
+
     /// Get effective timeout in ms
     pub fn get_timeout(&self, config: &crate::config::PopupConfig) -> u64 {
         // If notification specified a timeout, use it (unless 0 = server decides)

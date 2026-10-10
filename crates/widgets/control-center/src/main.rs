@@ -1,284 +1,271 @@
+//! rw-control: control center (Liquid Glass Control Center design).
+//!
+//!   heading (date, clock)
+//!   connectivity card    Wi-Fi / Bluetooth rows (switch + details)
+//!   quick tiles          [tiles] items, two per row
+//!   levels card          display + sound sliders, output row
+//!   now playing card
+//!   footer               Sleep · Lock · Power
+//!
+//! Sub-views slide in from the right: Bluetooth devices, sound outputs.
+
 mod animation;
 mod bluetooth;
 mod config;
+mod connectivity;
 mod css;
+mod footer;
+mod header;
+mod icons;
+mod levels;
 mod media;
-mod sliders;
-mod stats;
-mod toggles;
+mod sys;
+mod tiles;
 
 use config::Config;
 use gtk4::glib;
 use gtk4::prelude::*;
-use gtk4::{
-    Application, ApplicationWindow, Box, Orientation, Separator, Stack, StackTransitionType,
-};
+use gtk4::{Application, ApplicationWindow, Box, Orientation, Stack, StackTransitionType};
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
 
 const APP_ID: &str = "com.vib1240n.rust-widgets.control-center";
 const BINARY_NAME: &str = "rw-control";
 
+thread_local! {
+    /// Close (with animation) from anywhere: footer buttons, Wi-Fi details...
+    static CLOSER: RefCell<Option<Rc<dyn Fn()>>> = const { RefCell::new(None) };
+}
+
+pub fn close_panel() {
+    if let Some(f) = CLOSER.with(|c| c.borrow().clone()) {
+        f();
+    }
+}
+
 fn main() {
-    // Enforce single instance - exit if already running
     if is_already_running() {
         eprintln!("rw-control is already running");
         std::process::exit(0);
     }
-
     tracing_subscriber::fmt().with_env_filter("info").init();
-
     let app = Application::builder().application_id(APP_ID).build();
     app.connect_activate(build_ui);
     app.run();
 }
 
-/// Check if another instance of this widget is already running
 fn is_already_running() -> bool {
-    let my_pid = std::process::id();
+    let me = std::process::id();
+    let Ok(rd) = std::fs::read_dir("/proc") else { return false };
+    rd.flatten().any(|e| {
+        e.file_name().to_string_lossy().parse::<u32>().is_ok_and(|pid| pid != me)
+            && std::fs::read_to_string(e.path().join("comm")).is_ok_and(|c| c.trim() == BINARY_NAME)
+    })
+}
 
-    if let Ok(entries) = std::fs::read_dir("/proc") {
-        for entry in entries.flatten() {
-            let name = entry.file_name();
-            let name_str = name.to_string_lossy();
-
-            if let Ok(pid) = name_str.parse::<u32>() {
-                // Skip our own process
-                if pid == my_pid {
-                    continue;
-                }
-
-                let comm_path = entry.path().join("comm");
-                if let Ok(comm) = std::fs::read_to_string(&comm_path) {
-                    if comm.trim() == BINARY_NAME {
-                        return true;
-                    }
-                }
-            }
-        }
-    }
-    false
+fn panel(width: i32) -> Box {
+    let b = Box::new(Orientation::Vertical, 0);
+    b.add_css_class("widget-container");
+    b.add_css_class("cc-panel");
+    b.set_width_request(width);
+    b
 }
 
 fn build_ui(app: &Application) {
     let config = Rc::new(Config::load());
     css::load();
 
-    let window = ApplicationWindow::builder()
-        .application(app)
-        .title("Control Center")
-        .build();
-
-    // Layer shell setup
+    let window = ApplicationWindow::builder().application(app).title("Control Center").build();
     window.init_layer_shell();
     window.set_layer(Layer::Overlay);
     window.set_namespace("rust-widgets");
     window.set_keyboard_mode(KeyboardMode::OnDemand);
-
-    // Position from config
     apply_position(&window, &config);
 
-    // Create a stack for view switching
     let stack = Stack::new();
     stack.set_transition_type(StackTransitionType::SlideLeftRight);
     stack.set_transition_duration(200);
+    stack.set_vhomogeneous(false);
+    stack.set_interpolate_size(true);
 
-    // Main control center view
-    let main_container = Box::new(Orientation::Vertical, 0);
-    main_container.add_css_class("widget-container");
-    main_container.set_width_request(config.appearance.width);
-
-    // Quick toggles section
-    if config.sections.toggles {
-        let toggles_box = toggles::build(&config);
-        main_container.append(&toggles_box);
-        main_container.append(&Separator::new(Orientation::Horizontal));
+    // ---- close (shared by Esc, unfocus, footer, details) ----
+    let is_closing = Rc::new(Cell::new(false));
+    {
+        let w = window.clone();
+        let anim = config.animation.clone();
+        let closing = is_closing.clone();
+        let f: Rc<dyn Fn()> = Rc::new(move || {
+            if !closing.replace(true) {
+                close_with_animation(&w, &anim);
+            }
+        });
+        CLOSER.with(|c| *c.borrow_mut() = Some(f));
     }
 
-    // Sliders section
-    if config.sections.sliders {
-        let sliders_box = sliders::build(&config);
-        main_container.append(&sliders_box);
-        main_container.append(&Separator::new(Orientation::Horizontal));
+    // ---- sub-views ----
+    let s = stack.clone();
+    let bt_panel = bluetooth::BluetoothPanel::new(move || s.set_visible_child_name("main"));
+    let bt_view = panel(config.appearance.width);
+    bt_view.append(&bt_panel.container);
+    let bt_panel = Rc::new(bt_panel);
+
+    let s = stack.clone();
+    let (out_box, outputs) = levels::outputs_view(move || s.set_visible_child_name("main"));
+    let out_view = panel(config.appearance.width);
+    out_view.append(&out_box);
+
+    // ---- main view ----
+    let main = panel(config.appearance.width);
+    main.append(&header::build());
+
+    let conn = if config.sections.connectivity {
+        let net_cmd = config.commands.network.clone();
+        let (s, btp) = (stack.clone(), bt_panel.clone());
+        let (card, c) = connectivity::build(
+            move || {
+                close_panel();
+                sys::shell(&net_cmd);
+            },
+            move || {
+                s.set_visible_child_name("bluetooth");
+                btp.refresh();
+            },
+        );
+        main.append(&card);
+        Some(c)
+    } else {
+        None
+    };
+
+    let tiles = if config.sections.tiles {
+        tiles::build(&config).map(|(grid, t)| {
+            main.append(&grid);
+            t
+        })
+    } else {
+        None
+    };
+
+    let levels = if config.sections.levels {
+        let (s, ov) = (stack.clone(), outputs.clone());
+        let (card, l) = levels::build(move || {
+            ov.refresh();
+            s.set_visible_child_name("outputs");
+        });
+        main.append(&card);
+        Some(l)
+    } else {
+        None
+    };
+
+    let media = if config.sections.media {
+        let (card, m) = media::build();
+        main.append(&card);
+        Some(m)
+    } else {
+        None
+    };
+
+    if config.sections.footer {
+        main.append(&footer::build(config.commands.power.clone(), close_panel));
     }
 
-    // Media section
-    if config.sections.media {
-        let media_box = media::build();
-        main_container.append(&media_box);
-        main_container.append(&Separator::new(Orientation::Horizontal));
-    }
-
-    // Quick stats section
-    if config.sections.stats {
-        let stats_box = stats::build();
-        main_container.append(&stats_box);
-    }
-
-    stack.add_named(&main_container, Some("main"));
-
-    // Bluetooth panel view
-    let stack_clone = stack.clone();
-    let bluetooth_panel = bluetooth::BluetoothPanel::new(move || {
-        stack_clone.set_visible_child_name("main");
-    });
-
-    // Wrap bluetooth panel in a container with same styling
-    let bt_wrapper = Box::new(Orientation::Vertical, 0);
-    bt_wrapper.add_css_class("widget-container");
-    bt_wrapper.set_width_request(config.appearance.width);
-    bt_wrapper.append(&bluetooth_panel.container);
-
-    stack.add_named(&bt_wrapper, Some("bluetooth"));
-
-    // Setup bluetooth toggle callback
-    let stack_for_toggle = stack.clone();
-    let bt_panel = Rc::new(RefCell::new(bluetooth_panel));
-    let bt_panel_clone = bt_panel.clone();
-
-    toggles::set_bluetooth_callback(move || {
-        stack_for_toggle.set_visible_child_name("bluetooth");
-        bt_panel_clone.borrow().refresh();
-    });
-
+    stack.add_named(&main, Some("main"));
+    stack.add_named(&bt_view, Some("bluetooth"));
+    stack.add_named(&out_view, Some("outputs"));
+    stack.set_visible_child_name("main");
     window.set_child(Some(&stack));
 
-    // Setup polling for dynamic content
-    let config_clone = config.clone();
-    let bt_panel_poll = bt_panel.clone();
-    let stack_poll = stack.clone();
-
-    glib::timeout_add_local(
-        Duration::from_millis(config.behavior.poll_interval),
-        move || {
-            sliders::update(&config_clone);
-            media::update();
-            stats::update();
-
-            // Refresh bluetooth panel if visible
-            if stack_poll.visible_child_name().as_deref() == Some("bluetooth") {
-                bt_panel_poll.borrow().refresh();
+    // ---- polling while open (the process only lives while shown) ----
+    let tick = Rc::new(Cell::new(0u32));
+    let (st, btp) = (stack.clone(), bt_panel.clone());
+    glib::timeout_add_local(Duration::from_millis(config.behavior.poll_interval.max(250)), move || {
+        let n = tick.get().wrapping_add(1);
+        tick.set(n);
+        if let Some(l) = &levels {
+            l.poll();
+        }
+        if let Some(m) = &media {
+            m.poll();
+        }
+        if n % 3 == 0 {
+            if let Some(c) = &conn {
+                c.poll();
             }
+            if let Some(t) = &tiles {
+                t.poll();
+            }
+        }
+        if st.visible_child_name().as_deref() == Some("bluetooth") {
+            btp.refresh();
+        }
+        glib::ControlFlow::Continue
+    });
 
-            glib::ControlFlow::Continue
-        },
-    );
-
-    // Track if closing
-    let is_closing = Rc::new(RefCell::new(false));
-
-    // Close on Escape (or go back if in subview)
+    // ---- keys / focus ----
     if config.behavior.close_on_escape {
-        let controller = gtk4::EventControllerKey::new();
-        let window_clone = window.clone();
-        let is_closing_clone = is_closing.clone();
-        let anim_config = config.animation.clone();
-        let stack_esc = stack.clone();
-
-        controller.connect_key_pressed(move |_, key, _, _| {
-            if key == gtk4::gdk::Key::Escape {
-                // If in bluetooth view, go back to main
-                if stack_esc.visible_child_name().as_deref() == Some("bluetooth") {
-                    stack_esc.set_visible_child_name("main");
-                    return glib::Propagation::Stop;
-                }
-
-                // Otherwise close the window
-                if !*is_closing_clone.borrow() {
-                    *is_closing_clone.borrow_mut() = true;
-                    close_with_animation(&window_clone, &anim_config);
-                }
-                glib::Propagation::Stop
+        let keys = gtk4::EventControllerKey::new();
+        let st = stack.clone();
+        keys.connect_key_pressed(move |_, key, _, _| {
+            if key != gtk4::gdk::Key::Escape {
+                return glib::Propagation::Proceed;
+            }
+            if st.visible_child_name().as_deref() != Some("main") {
+                st.set_visible_child_name("main");
             } else {
-                glib::Propagation::Proceed
+                close_panel();
             }
+            glib::Propagation::Stop
         });
-        window.add_controller(controller);
+        window.add_controller(keys);
     }
-
-    // Close on unfocus
     if config.behavior.close_on_unfocus {
-        let focus_controller = gtk4::EventControllerFocus::new();
-        let window_clone = window.clone();
-        let is_closing_clone = is_closing.clone();
-        let anim_config = config.animation.clone();
-        focus_controller.connect_leave(move |_| {
-            if !*is_closing_clone.borrow() {
-                *is_closing_clone.borrow_mut() = true;
-                close_with_animation(&window_clone, &anim_config);
-            }
-        });
-        window.add_controller(focus_controller);
+        let focus = gtk4::EventControllerFocus::new();
+        focus.connect_leave(|_| close_panel());
+        window.add_controller(focus);
     }
 
     window.present();
-
-    // Animate in
     if config.animation.enabled {
         let direction = match config.animation.direction.as_str() {
             "up" => animation::Direction::Up,
             _ => animation::Direction::Down,
         };
-        animation::slide_in(
-            &window,
-            direction,
-            config.animation.duration,
-            config.position.margin_top,
-        );
+        animation::slide_in(&window, direction, config.animation.duration, config.position.margin_top);
     }
 }
 
-fn apply_position(window: &gtk4::ApplicationWindow, config: &Config) {
-    window.set_anchor(Edge::Top, false);
-    window.set_anchor(Edge::Bottom, false);
-    window.set_anchor(Edge::Left, false);
-    window.set_anchor(Edge::Right, false);
-
-    match config.position.anchor.as_str() {
-        "top-left" => {
-            window.set_anchor(Edge::Top, true);
-            window.set_anchor(Edge::Left, true);
-        }
-        "top-center" => {
-            window.set_anchor(Edge::Top, true);
-        }
-        "top-right" => {
-            window.set_anchor(Edge::Top, true);
-            window.set_anchor(Edge::Right, true);
-        }
-        "bottom-left" => {
-            window.set_anchor(Edge::Bottom, true);
-            window.set_anchor(Edge::Left, true);
-        }
-        "bottom-center" => {
-            window.set_anchor(Edge::Bottom, true);
-        }
-        "bottom-right" => {
-            window.set_anchor(Edge::Bottom, true);
-            window.set_anchor(Edge::Right, true);
-        }
-        _ => {
-            window.set_anchor(Edge::Top, true);
-            window.set_anchor(Edge::Right, true);
-        }
+fn apply_position(window: &ApplicationWindow, config: &Config) {
+    for e in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
+        window.set_anchor(e, false);
     }
-
+    let edges: &[Edge] = match config.position.anchor.as_str() {
+        "top-left" => &[Edge::Top, Edge::Left],
+        "top-center" => &[Edge::Top],
+        "bottom-left" => &[Edge::Bottom, Edge::Left],
+        "bottom-center" => &[Edge::Bottom],
+        "bottom-right" => &[Edge::Bottom, Edge::Right],
+        _ => &[Edge::Top, Edge::Right],
+    };
+    for e in edges {
+        window.set_anchor(*e, true);
+    }
     window.set_margin(Edge::Top, config.position.margin_top);
     window.set_margin(Edge::Right, config.position.margin_right);
     window.set_margin(Edge::Bottom, config.position.margin_bottom);
     window.set_margin(Edge::Left, config.position.margin_left);
 }
 
-fn close_with_animation(window: &gtk4::ApplicationWindow, anim_config: &config::AnimationConfig) {
-    if anim_config.enabled {
-        let direction = match anim_config.direction.as_str() {
+fn close_with_animation(window: &ApplicationWindow, anim: &config::AnimationConfig) {
+    if anim.enabled {
+        let direction = match anim.direction.as_str() {
             "down" => animation::Direction::Up,
             _ => animation::Direction::Down,
         };
         let w = window.clone();
-        animation::slide_out(window, direction, anim_config.duration, move || w.close());
+        animation::slide_out(window, direction, anim.duration, move || w.close());
     } else {
         window.close();
     }

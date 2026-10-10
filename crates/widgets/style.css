@@ -1,372 +1,122 @@
 /* ===========================================================================
- * rust-widgets - User Style Override
- * Location: ~/.config/rw/style.css
+ * rust-widgets - component styles
+ * Loaded after the theme (palette.css + glass.css). Colours: palette names
+ * only. Root surfaces, cards, buttons, sliders, switches and popovers come
+ * from glass.css; this file is layout and widget-specific states.
  * ===========================================================================*/
+
+.widget-container { padding: 16px; }
+.popup-container  { padding: 16px; }
+.nc-container     { padding: 0; min-width: 400px; }
+.osd-container    { padding: 12px 16px; min-width: 200px; }
 
 /* ===========================================================================
- * CRITICAL: Window Transparency for Hyprland Blur
- * These rules ensure the GTK window is fully transparent so Hyprland
- * can apply blur to the semi-transparent container inside.
+ * STATS-POPUP (reference design)
  * ===========================================================================*/
-window,
-window.background,
-.background,
-headerbar,
-decoration,
-windowhandle {
-  background-color: transparent;
-  background-image: none;
-  box-shadow: none;
-  border: none;
-}
-
-/* Force transparency on all window-level elements */
-window > * {
-  background-color: transparent;
-}
-
-/* ===========================================================================
- * Widget Containers - Semi-transparent for blur effect
- * ===========================================================================*/
-.widget-container {
-  background-color: alpha(#141618, 0.65);
-  border: 1px solid alpha(#57595c, 0.3);
-  border-radius: 20px;
-  padding: 16px;
-}
-
-.popup-container {
-  background-color: alpha(#141618, 0.75);
-  border: 1px solid alpha(#57595c, 0.3);
-  border-radius: 16px;
-  padding: 12px;
-  box-shadow: 0 8px 32px alpha(#000, 0.4);
-}
-
-/* ===========================================================================
- * COMMON - Typography
- * ===========================================================================*/
-separator {
-  background: alpha(#57595c, 0.25);
-  min-height: 1px;
-  margin: 12px 0;
-}
-
-.section-title {
-  color: alpha(#3daee9, 0.8);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  margin-top: 12px;
-  margin-bottom: 6px;
-}
-
-.section-title:first-child {
-  margin-top: 0;
-}
-
-/* ===========================================================================
- * COMMON - Progress Bars
- * ===========================================================================*/
-progressbar {
-  min-height: 6px;
-  margin-top: 4px;
-  margin-bottom: 8px;
-}
-
-progressbar trough {
-  background-color: alpha(#292c30, 0.6);
-  border-radius: 3px;
-  min-height: 6px;
-}
-
-progressbar progress {
-  background-color: #3daee9;
-  border-radius: 3px;
-  min-height: 6px;
-}
-
-progressbar.warning progress {
-  background-color: #f7c843;
-}
-
-progressbar.critical progress {
-  background-color: #ed8796;
-}
-
-/* ===========================================================================
- * COMMON - Sliders / Scales
- * ===========================================================================*/
-scale trough {
-  background: alpha(#292c30, 0.6);
-  border-radius: 6px;
-  min-height: 6px;
-}
-
-scale highlight {
-  background: #3daee9;
-  border-radius: 6px;
-}
-
-scale slider {
-  background: #fcfcfc;
-  border-radius: 50%;
-  min-width: 16px;
-  min-height: 16px;
-  margin: -5px;
-  box-shadow: 0 2px 4px alpha(#000, 0.3);
-}
-
-scale slider:hover {
-  background: #ffffff;
-}
-
-scale.muted highlight {
-  background: alpha(#fcfcfc, 0.25);
-}
-
-/* ===========================================================================
- * COMMON - Buttons
- * ===========================================================================*/
-button {
-  background: alpha(#292c30, 0.5);
-  border: none;
-  border-radius: 12px;
-  padding: 8px 12px;
-  color: alpha(#fcfcfc, 0.55);
-  transition: all 150ms ease;
-}
-
-button:hover {
-  background: alpha(#3daee9, 0.25);
-  color: #fcfcfc;
-}
-
-button.flat {
-  background: transparent;
-}
-
-button.flat:hover {
-  background: alpha(#3daee9, 0.2);
-}
-
-button.circular {
-  border-radius: 50%;
-  padding: 8px;
-  min-width: 36px;
-  min-height: 36px;
-}
-
-button.destructive-action {
-  background: alpha(#ed8796, 0.2);
-  color: #ed8796;
-}
-
-button.destructive-action:hover {
-  background: alpha(#ed8796, 0.3);
-}
-
-/* ===========================================================================
- * COMMON - Switches
- * ===========================================================================*/
-switch {
-  background: alpha(#292c30, 0.6);
-  border-radius: 12px;
-  min-width: 48px;
-  min-height: 24px;
-}
-
-switch:checked {
-  background: #3daee9;
-}
-
-switch slider {
-  background: #fcfcfc;
-  border-radius: 50%;
-  min-width: 20px;
-  min-height: 20px;
-  margin: 2px;
-}
-
-/* ===========================================================================
- * COMMON - Empty State & Urgency
- * ===========================================================================*/
-.empty-state {
-  padding: 16px;
-}
-
-.empty-label {
-  font-size: 12px;
-  color: alpha(#fcfcfc, 0.35);
-  font-style: italic;
-}
-
-.urgency-low {
-  opacity: 0.85;
-}
-
-.urgency-critical {
-  border-color: #ed8796;
-  background-color: alpha(#281c1e, 0.75);
-}
-
-/* ===========================================================================
- * STATS-POPUP
- * ===========================================================================*/
-.stat-row {
-  margin: 4px 0;
-}
+.stat-row { margin: 4px 0; }
 
 .stat-label {
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
   font-size: 12px;
   min-width: 80px;
 }
 
 .stat-value {
-  color: #fcfcfc;
+  color: @fg;
   font-size: 12px;
   font-weight: 500;
 }
 
 .stat-item {
   padding: 8px 12px;
-  background: alpha(#292c30, 0.4);
   border-radius: 12px;
 }
 
 .stat-icon {
   font-size: 14px;
-  color: #3daee9;
+  color: @accent;
   margin-right: 6px;
 }
 
 .temp-label {
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
   font-size: 11px;
 }
 
 .temp-value {
-  color: #fcfcfc;
+  color: @fg;
   font-size: 11px;
   font-weight: 500;
 }
 
-.temp-warning {
-  color: #f7c843;
-}
-
-.temp-critical {
-  color: #ed8796;
-}
+.temp-warning  { color: @yellow; }
+.temp-critical { color: @red; }
 
 /* ===========================================================================
- * CONTROL-CENTER - Toggles
+ * CONTROL-CENTER
  * ===========================================================================*/
-.toggles-section {
-  margin-bottom: 4px;
-}
-
-.toggle-grid {
-  margin: 4px 0;
-}
+.toggles-section { margin-bottom: 4px; }
+.toggle-grid     { margin: 4px 0; }
 
 .toggle-btn {
-  background: alpha(#292c30, 0.5);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 12px;
   min-width: 56px;
   min-height: 56px;
-  border: none;
   transition: all 200ms ease;
 }
 
 .toggle-btn:hover {
-  background: alpha(#3daee9, 0.25);
+  background-color: alpha(@accent, 0.22);
 }
 
 .toggle-btn.active {
-  background: #3daee9;
+  background-color: @accent;
+  border-color: alpha(@fg, 0.20);
+  box-shadow: 0 0 14px alpha(@accent, 0.30);
 }
 
-.toggle-btn.active label {
-  color: #141618;
-}
+.toggle-icon      { font-size: 20px; color: @fg; }
+.toggle-label     { font-size: 10px; color: alpha(@fg, 0.55); }
 
-.toggle-btn box {
-  spacing: 4px;
-}
-
-.toggle-icon {
-  font-size: 20px;
-  color: #fcfcfc;
-}
-
-.toggle-btn.active .toggle-icon {
-  color: #141618;
-}
-
-.toggle-label {
-  font-size: 9px;
-  color: alpha(#fcfcfc, 0.55);
-}
-
+.toggle-btn.active label,
+.toggle-btn.active .toggle-icon,
 .toggle-btn.active .toggle-label {
-  color: #141618;
+  color: @accent_fg;
 }
 
-/* ===========================================================================
- * CONTROL-CENTER - Sliders
- * ===========================================================================*/
-.sliders-section {
-  margin: 4px 0;
-}
-
-.slider-row {
-  margin: 8px 0;
-}
+.sliders-section { margin: 4px 0; }
+.slider-row      { margin: 8px 0; }
+.slider-row scale { margin: 0 8px; }
 
 .slider-icon {
   font-size: 18px;
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
   min-width: 28px;
-}
-
-.slider-row scale {
-  margin: 0 8px;
-}
-
-.slider-row scale trough {
-  min-height: 8px;
-}
-
-.slider-row scale slider {
-  min-width: 18px;
-  min-height: 18px;
 }
 
 .slider-value {
   font-size: 12px;
-  color: #fcfcfc;
+  color: @fg;
   min-width: 36px;
 }
 
 .output-selector {
-  background: alpha(#292c30, 0.5);
-  border-radius: 8px;
+  background-color: alpha(@surface, 0.42);
+  border-radius: 10px;
   padding: 4px 8px;
   margin-top: 4px;
   border: none;
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
   font-size: 11px;
 }
 
 .output-selector:hover {
-  background: alpha(#292c30, 0.7);
+  background-color: alpha(@accent, 0.22);
+  color: @fg;
 }
 
-/* GtkDropDown draws its own button inside .output-selector; keep it see-through
-   so the glass background above is what shows */
+/* GtkDropDown draws its own button inside .output-selector; keep it see-through */
 .output-selector > button {
   background: none;
   border: none;
@@ -376,288 +126,165 @@ switch slider {
   color: inherit;
 }
 
-/* ===========================================================================
- * CONTROL-CENTER - Media Section
- * ===========================================================================*/
 .media-section {
-  background: alpha(#292c30, 0.4);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 12px;
   margin: 4px 0;
 }
 
-.media-section.inactive {
-  opacity: 0.5;
-}
+.media-section.inactive { opacity: 0.5; }
 
 .media-art {
-  border-radius: 8px;
+  border-radius: 10px;
   min-width: 48px;
   min-height: 48px;
-  background: alpha(#292c30, 0.6);
+  background-color: alpha(@surface, 0.42);
 }
 
-.media-info {
-  margin-left: 12px;
-}
+.media-info { margin-left: 12px; }
 
 .media-title {
   font-size: 13px;
-  font-weight: 600;
-  color: #fcfcfc;
+  font-weight: 500;
+  color: @fg;
 }
 
 .media-artist {
   font-size: 11px;
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
 }
 
-.media-controls {
-  margin-top: 8px;
-}
+.media-controls { margin-top: 8px; }
 
 .media-btn {
-  background: transparent;
-  border: none;
+  background-color: transparent;
+  border-color: transparent;
   padding: 8px;
   border-radius: 50%;
-  color: #fcfcfc;
+  color: @fg;
 }
 
-.media-btn:hover {
-  background: alpha(#3daee9, 0.25);
-}
+.media-btn:hover { background-color: alpha(@accent, 0.22); }
 
 .media-btn.play {
-  background: #3daee9;
-  color: #141618;
+  background-color: @accent;
+  color: @accent_fg;
+  box-shadow: 0 0 12px alpha(@accent, 0.30);
 }
 
-.media-btn.play:hover {
-  background: alpha(#3daee9, 0.85);
-}
+.media-btn.play:hover { background-color: alpha(@accent, 0.85); }
 
-/* ===========================================================================
- * CONTROL-CENTER - Stats Section
- * ===========================================================================*/
-.stats-section {
-  margin-top: 4px;
-}
-
-.stats-row {
-  margin: 2px 0;
-}
+.stats-section { margin-top: 4px; }
+.stats-row     { margin: 2px 0; }
 
 /* ===========================================================================
  * VOLUME-CONTROL
  * ===========================================================================*/
-.device-selector {
-  margin-bottom: 12px;
-}
+.device-selector { margin-bottom: 12px; }
 
 .device-button {
-  background: alpha(#292c30, 0.5);
   border-radius: 12px;
-  padding: 10px 14px;
-  border: none;
+  padding: 10px 12px;
   transition: all 200ms ease;
 }
 
-.device-button:hover {
-  background: alpha(#3daee9, 0.25);
-}
+.device-button:hover { background-color: alpha(@accent, 0.22); }
 
 .device-button.active {
-  background: alpha(#3daee9, 0.2);
-  border: 1px solid alpha(#3daee9, 0.4);
+  background-color: alpha(@accent, 0.18);
+  border-color: alpha(@accent, 0.40);
+  box-shadow: 0 0 12px alpha(@accent, 0.12);
 }
 
-.device-icon {
-  color: alpha(#fcfcfc, 0.55);
-  margin-right: 8px;
-}
-
-.device-button.active .device-icon {
-  color: #3daee9;
-}
-
-.device-name {
-  font-size: 12px;
-  color: #fcfcfc;
-}
-
-.device-button.active .device-name {
-  color: #ffffff;
-}
-
-.device-check {
-  color: #3daee9;
-  margin-left: 8px;
-}
+.device-icon                  { color: alpha(@fg, 0.55); margin-right: 8px; }
+.device-button.active .device-icon { color: @accent; }
+.device-name                  { font-size: 12px; color: @fg; }
+.device-check                 { color: @accent; margin-left: 8px; }
 
 .master-volume {
-  background: alpha(#292c30, 0.4);
-  border-radius: 16px;
-  padding: 14px;
+  border-radius: 12px;
+  padding: 12px;
   margin-bottom: 12px;
 }
 
-.volume-row {
-  margin: 0;
-}
-
-.volume-icon {
-  color: alpha(#fcfcfc, 0.55);
-  min-width: 24px;
-}
-
-.volume-icon.muted {
-  color: #ed8796;
-}
+.volume-row  { margin: 0; }
+.volume-icon { color: alpha(@fg, 0.55); min-width: 24px; }
+.volume-icon.muted { color: @red; }
 
 .mute-button {
-  background: transparent;
-  border: none;
+  background-color: transparent;
+  border-color: transparent;
   padding: 6px;
-  border-radius: 8px;
+  border-radius: 10px;
   min-width: 36px;
   min-height: 36px;
 }
 
-.mute-button:hover {
-  background: alpha(#3daee9, 0.2);
-}
+.mute-button:hover       { background-color: alpha(@accent, 0.22); }
+.mute-button.muted       { background-color: alpha(@red, 0.18); }
+.mute-button.muted:hover { background-color: alpha(@red, 0.28); }
 
-.mute-button.muted {
-  background: alpha(#ed8796, 0.2);
-}
-
-.mute-button.muted:hover {
-  background: alpha(#ed8796, 0.3);
-}
-
-.volume-slider {
-  margin: 0 12px;
-}
-
-.volume-slider trough {
-  min-height: 8px;
-}
-
-.volume-slider slider {
-  min-width: 18px;
-  min-height: 18px;
-}
+.volume-slider { margin: 0 12px; }
 
 .volume-value {
   font-size: 12px;
   font-weight: 500;
-  color: #fcfcfc;
+  color: @fg;
   min-width: 40px;
 }
 
-.volume-value.muted {
-  color: alpha(#fcfcfc, 0.35);
-}
+.volume-value.muted { color: alpha(@fg, 0.40); }
 
-.section-separator {
-  background: alpha(#57595c, 0.25);
-  min-height: 1px;
-  margin: 12px 0;
-}
-
-.app-volumes {
-  margin-top: 4px;
-}
+.app-volumes { margin-top: 4px; }
 
 .app-row {
-  background: alpha(#292c30, 0.35);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 8px 12px;
   margin-bottom: 6px;
 }
 
-.app-row:last-child {
-  margin-bottom: 0;
-}
+.app-row:last-child { margin-bottom: 0; }
 
-.app-icon {
-  color: alpha(#fcfcfc, 0.55);
-  min-width: 20px;
-  margin-right: 10px;
-}
-
-.app-info {
-  margin-right: 8px;
-}
-
-.app-name {
-  font-size: 12px;
-  font-weight: 500;
-  color: #fcfcfc;
-}
-
-.app-stream {
-  font-size: 10px;
-  color: alpha(#fcfcfc, 0.35);
-}
-
-.app-slider trough {
-  min-height: 6px;
-}
-
-.app-slider slider {
-  min-width: 14px;
-  min-height: 14px;
-  margin: -4px;
-}
+.app-icon   { color: alpha(@fg, 0.55); min-width: 20px; margin-right: 10px; }
+.app-info   { margin-right: 8px; }
+.app-name   { font-size: 12px; font-weight: 500; color: @fg; }
+.app-stream { font-size: 10px; color: alpha(@fg, 0.40); }
 
 .app-volume-value {
   font-size: 11px;
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
   min-width: 32px;
 }
 
 .app-mute-btn {
-  background: transparent;
-  border: none;
+  background-color: transparent;
+  border-color: transparent;
   padding: 4px;
-  border-radius: 6px;
+  border-radius: 10px;
   min-width: 28px;
   min-height: 28px;
-  color: alpha(#fcfcfc, 0.35);
+  color: alpha(@fg, 0.40);
 }
 
 .app-mute-btn:hover {
-  background: alpha(#3daee9, 0.2);
-  color: alpha(#fcfcfc, 0.55);
+  background-color: alpha(@accent, 0.22);
+  color: @fg;
 }
 
-.app-mute-btn.muted {
-  color: #ed8796;
-}
+.app-mute-btn.muted { color: @red; }
 
-.input-section {
-  margin-top: 4px;
-}
+.input-section { margin-top: 4px; }
 
 .input-volume {
-  background: alpha(#292c30, 0.35);
   border-radius: 12px;
   padding: 12px;
 }
 
-.input-icon {
-  color: alpha(#fcfcfc, 0.55);
-}
-
-.input-icon.muted {
-  color: #ed8796;
-}
+.input-icon       { color: alpha(@fg, 0.55); }
+.input-icon.muted { color: @red; }
 
 .app-scroll {
   min-height: 60px;
-  max-height: 200px;
 }
 
 .app-scroll undershoot,
@@ -669,250 +296,198 @@ switch slider {
  * MEDIA-PLAYER
  * ===========================================================================*/
 .album-art-frame {
-  background-color: alpha(#292c30, 0.6);
-  border-radius: 19px 19px 0 0;
+  border-radius: 12px;
   min-height: 320px;
   margin: 0;
   padding: 0;
 }
 
 .album-art {
-  border-radius: 19px 19px 0 0;
+  border-radius: 12px;
   margin: 0;
   padding: 0;
 }
 
-.controls-container {
-  padding: 16px;
-  margin: 0;
-}
-
-.track-info {
-  margin-bottom: 8px;
-}
+.controls-container { padding: 12px 4px 0 4px; margin: 0; }
+.track-info         { margin-bottom: 8px; }
 
 .track-title {
-  color: #fcfcfc;
+  color: @fg;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .track-artist {
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
   font-size: 12px;
   margin-top: 2px;
 }
 
-.progress-section {
-  margin-bottom: 4px;
-}
-
-.progress-bar {
-  min-height: 4px;
-}
-
-.progress-bar trough {
-  background-color: alpha(#fcfcfc, 0.2);
-  border-radius: 2px;
-  min-height: 4px;
-}
-
-.progress-bar highlight {
-  background-color: #fcfcfc;
-  border-radius: 2px;
-}
-
-.progress-bar slider {
-  background-color: #fcfcfc;
-  border-radius: 50%;
-  min-width: 12px;
-  min-height: 12px;
-  margin: -4px;
-}
-
-.time-labels {
-  margin-top: 4px;
-}
+.progress-section { margin-bottom: 4px; }
+.time-labels      { margin-top: 4px; }
 
 .time-position,
 .time-duration {
-  color: alpha(#fcfcfc, 0.35);
+  color: alpha(@fg, 0.40);
   font-size: 10px;
   font-family: monospace;
 }
 
-.playback-controls {
-  margin: 12px 0 8px 0;
-}
+.playback-controls { margin: 12px 0 8px 0; }
 
 .control-btn {
   background-color: transparent;
-  border: none;
+  border-color: transparent;
   border-radius: 50%;
   padding: 8px;
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
   min-width: 44px;
   min-height: 44px;
 }
 
 .control-btn:hover {
-  color: #fcfcfc;
+  background-color: alpha(@accent, 0.22);
+  color: @fg;
 }
 
-.control-btn image {
-  -gtk-icon-size: 24px;
-}
+.control-btn image { -gtk-icon-size: 24px; }
 
 .play-btn {
-  background-color: #fcfcfc;
-  color: #141618;
+  background-color: @accent;
+  color: @accent_fg;
   min-width: 56px;
   min-height: 56px;
+  box-shadow: 0 0 16px alpha(@accent, 0.30);
 }
 
 .play-btn:hover {
-  background-color: alpha(#fcfcfc, 0.9);
-  color: #141618;
+  background-color: alpha(@accent, 0.85);
+  color: @accent_fg;
 }
 
-.play-btn image {
-  -gtk-icon-size: 28px;
-}
+.play-btn image { -gtk-icon-size: 28px; }
 
-.volume-section {
-  margin-top: 8px;
-}
+.volume-section { margin-top: 8px; }
 
 .volume-section .volume-icon {
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
   -gtk-icon-size: 16px;
   min-width: 24px;
 }
 
-.volume-section .volume-slider trough {
-  background-color: alpha(#fcfcfc, 0.2);
-  min-height: 4px;
-}
-
-.volume-section .volume-slider highlight {
-  background-color: alpha(#fcfcfc, 0.6);
-}
-
-.volume-section .volume-slider slider {
-  min-width: 12px;
-  min-height: 12px;
-  margin: -4px;
-}
-
 .volume-label {
-  color: alpha(#fcfcfc, 0.35);
+  color: alpha(@fg, 0.55);
   font-size: 11px;
   min-width: 36px;
   font-family: monospace;
 }
 
-.player-selector {
-  margin-bottom: 8px;
-}
+.player-selector { margin-bottom: 8px; }
 
 .player-dot {
-  background-color: alpha(#fcfcfc, 0.2);
-  border: none;
+  background-color: alpha(@surface, 0.42);
   border-radius: 50%;
   min-width: 32px;
   min-height: 32px;
   padding: 6px;
-  color: alpha(#fcfcfc, 0.55);
+  color: alpha(@fg, 0.55);
 }
 
 .player-dot:hover {
-  background-color: alpha(#fcfcfc, 0.3);
-  color: #fcfcfc;
+  background-color: alpha(@accent, 0.22);
+  color: @fg;
 }
 
 .player-dot.active {
-  background-color: alpha(#fcfcfc, 0.4);
-  color: #fcfcfc;
+  background-color: alpha(@accent, 0.18);
+  border-color: alpha(@accent, 0.40);
+  color: @accent;
 }
 
-.player-dot image {
-  -gtk-icon-size: 16px;
+.player-dot image { -gtk-icon-size: 16px; }
+
+/* ===========================================================================
+ * TRACK ALIGNMENT - pin named sliders to the shared track (beats any more
+ * specific leftovers)
+ * ===========================================================================*/
+.progress-bar,
+.slider-row scale,
+.volume-slider,
+.app-slider,
+.volume-section .volume-slider {
+  min-height: 6px;
 }
 
-/* ============================================
-   NOTIFICATION CENTER - GLASSMORPHIC DESIGN
-   Based on Figma: Glassmorphic Notification Center
-   ============================================ */
-
-/* Main container - glassmorphic with purple tint */
-.nc-container {
-  background-color: alpha(#ffffff, 0.1);
-  border: 1px solid alpha(#ffffff, 0.2);
-  border-radius: 24px;
-  padding: 0;
-  min-width: 400px;
+.progress-bar trough,
+.slider-row scale trough,
+.volume-slider trough,
+.app-slider trough,
+.volume-section .volume-slider trough {
+  background-color: alpha(@surface, 0.65);
+  border-radius: 4px;
+  min-height: 6px;
 }
 
-/* ==================== HEADER ==================== */
+.progress-bar highlight,
+.slider-row scale highlight,
+.volume-slider highlight,
+.app-slider highlight,
+.volume-section .volume-slider highlight {
+  background-color: @accent;
+  border-radius: 4px;
+}
+
+.progress-bar slider,
+.slider-row scale slider,
+.volume-slider slider,
+.app-slider slider,
+.volume-section .volume-slider slider {
+  background-color: @fg;
+  border-radius: 50%;
+  min-width: 14px;
+  min-height: 14px;
+  margin: -4px;
+  box-shadow: 0 1px 3px alpha(@shadow, 0.45);
+}
+
+/* ===========================================================================
+ * NOTIFICATION CENTER - panel
+ * ===========================================================================*/
 .nc-header {
-  padding: 24px;
-  border-bottom: 1px solid alpha(#ffffff, 0.1);
+  padding: 16px;
+  border-bottom: 1px solid alpha(@border, 0.25);
 }
 
-/* Bell icon wrapper - rounded box */
 .nc-bell-wrapper {
-  background-color: alpha(#ffffff, 0.1);
-  border-radius: 12px;
+  background-color: alpha(@surface, 0.42);
+  border-radius: 10px;
   padding: 8px;
 }
 
-.nc-bell-icon {
-  color: #ffffff;
-  -gtk-icon-style: symbolic;
-}
+.nc-bell-icon { color: @accent; -gtk-icon-style: symbolic; }
 
-/* Title */
 .nc-title {
-  font-size: 18px;
-  font-weight: 500;
-  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  color: @fg;
 }
 
-/* Subtitle (unread count) */
 .nc-subtitle {
-  font-size: 13px;
-  font-weight: 400;
-  color: alpha(#ffffff, 0.6);
+  font-size: 11px;
+  color: alpha(@fg, 0.55);
   margin-top: 2px;
 }
 
-/* Settings button */
 .nc-settings-btn {
-  background-color: alpha(#ffffff, 0.05);
-  border-radius: 8px;
   padding: 8px;
-  border: none;
   min-width: 36px;
   min-height: 36px;
 }
 
-.nc-settings-btn:hover {
-  background-color: alpha(#ffffff, 0.1);
-}
+.nc-settings-btn image       { color: alpha(@fg, 0.75); -gtk-icon-style: symbolic; }
+.nc-settings-btn:hover image { color: @fg; }
 
-.nc-settings-btn image {
-  color: alpha(#ffffff, 0.7);
-  -gtk-icon-style: symbolic;
-}
-
-.nc-settings-btn:hover image {
-  color: #ffffff;
-}
-
-/* ==================== SCROLL AREA ==================== */
-.nc-scroll {
-  background-color: transparent;
-}
+.nc-scroll { background-color: transparent; }
 
 .nc-scroll undershoot.top,
 .nc-scroll undershoot.bottom,
@@ -921,10 +496,9 @@ switch slider {
   background: none;
 }
 
-/* ==================== LIST ==================== */
 .nc-list {
   background-color: transparent;
-  padding: 12px;
+  padding: 16px;
 }
 
 .nc-list row {
@@ -933,9 +507,7 @@ switch slider {
   margin-bottom: 8px;
 }
 
-.nc-list row:last-child {
-  margin-bottom: 0;
-}
+.nc-list row:last-child { margin-bottom: 0; }
 
 .nc-row {
   background-color: transparent;
@@ -943,353 +515,195 @@ switch slider {
   padding: 0;
 }
 
-/* ==================== NOTIFICATION CARDS ==================== */
 .nc-card {
-  background-color: alpha(#ffffff, 0.05);
-  border: 1px solid alpha(#ffffff, 0.1);
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 12px;
+  padding: 12px;
   transition: all 200ms ease;
 }
 
-.nc-card:hover {
-  background-color: alpha(#ffffff, 0.1);
-  /* Slight scale effect - GTK4 doesn't support transform, using shadow instead */
-}
+.nc-card:hover { background-color: alpha(@accent, 0.12); }
 
-/* ==================== ICON WRAPPER (colored background) ==================== */
 .nc-icon-wrapper {
-  background-color: alpha(#ffffff, 0.05);
-  border-radius: 12px;
+  background-color: alpha(@surface, 0.42);
+  border-radius: 10px;
   padding: 8px;
   min-width: 36px;
   min-height: 36px;
 }
 
-/* Icon colors by type */
-.nc-icon-info {
-  background-color: alpha(#60a5fa, 0.15);
-}
+.nc-icon-info    { background-color: alpha(@accent, 0.15); }
+.nc-icon-success { background-color: alpha(@green, 0.15); }
+.nc-icon-warning { background-color: alpha(@yellow, 0.15); }
+.nc-icon-error   { background-color: alpha(@red, 0.15); }
 
-.nc-icon-success {
-  background-color: alpha(#34d399, 0.15);
-}
+.nc-type-icon          { -gtk-icon-style: symbolic; }
+.nc-icon-color-info    { color: @accent; }
+.nc-icon-color-success { color: @green; }
+.nc-icon-color-warning { color: @yellow; }
+.nc-icon-color-error   { color: @red; }
 
-.nc-icon-warning {
-  background-color: alpha(#fbbf24, 0.15);
-}
+.nc-card-content { padding: 0; }
 
-.nc-icon-error {
-  background-color: alpha(#f87171, 0.15);
-}
-
-/* Icon image colors */
-.nc-type-icon {
-  -gtk-icon-style: symbolic;
-}
-
-.nc-icon-color-info {
-  color: #60a5fa;
-}
-
-.nc-icon-color-success {
-  color: #34d399;
-}
-
-.nc-icon-color-warning {
-  color: #fbbf24;
-}
-
-.nc-icon-color-error {
-  color: #f87171;
-}
-
-/* ==================== CARD CONTENT ==================== */
-.nc-card-content {
-  padding: 0;
-}
-
-/* Card title */
 .nc-card-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #ffffff;
+  color: @fg;
 }
 
-/* App name */
-.nc-card-app {
-  font-size: 11px;
-  font-weight: 400;
-  color: alpha(#ffffff, 0.4);
-  margin-top: 1px;
-}
-
-/* Time */
+.nc-card-app,
 .nc-card-time {
   font-size: 11px;
-  font-weight: 400;
-  color: alpha(#ffffff, 0.5);
+  color: alpha(@fg, 0.55);
 }
 
-/* Body text */
+.nc-card-app { margin-top: 1px; }
+
 .nc-card-body {
-  font-size: 13px;
-  font-weight: 400;
-  color: alpha(#ffffff, 0.7);
+  font-size: 12px;
+  color: alpha(@fg, 0.75);
   margin-top: 6px;
-  line-height: 1.4;
 }
 
-/* ==================== DISMISS BUTTON ==================== */
 .nc-dismiss-btn {
-  background-color: alpha(#ffffff, 0.05);
-  border-radius: 8px;
   padding: 6px;
-  border: none;
   min-width: 24px;
   min-height: 24px;
   opacity: 0;
   transition: opacity 200ms ease;
 }
 
-.nc-card:hover .nc-dismiss-btn {
-  opacity: 1;
-}
-
-.nc-dismiss-btn:hover {
-  background-color: alpha(#ffffff, 0.1);
-}
+.nc-card:hover .nc-dismiss-btn { opacity: 1; }
 
 .nc-dismiss-label {
   font-size: 12px;
   font-weight: 500;
-  color: alpha(#ffffff, 0.5);
+  color: alpha(@fg, 0.55);
 }
 
-.nc-dismiss-btn:hover .nc-dismiss-label {
-  color: #ffffff;
-}
+.nc-dismiss-btn:hover .nc-dismiss-label { color: @fg; }
 
-/* ==================== EMPTY STATE ==================== */
-.nc-empty {
-  padding: 48px 24px;
-}
-
-.nc-empty-icon {
-  color: alpha(#ffffff, 0.3);
-  -gtk-icon-style: symbolic;
-}
+.nc-empty      { padding: 48px 16px; }
+.nc-empty-icon { color: alpha(@fg, 0.40); -gtk-icon-style: symbolic; }
 
 .nc-empty-label {
-  font-size: 14px;
-  font-weight: 400;
-  color: alpha(#ffffff, 0.6);
+  font-size: 12px;
+  color: alpha(@fg, 0.55);
 }
 
-/* ==================== FOOTER ==================== */
 .nc-footer {
   padding: 16px;
-  border-top: 1px solid alpha(#ffffff, 0.1);
+  border-top: 1px solid alpha(@border, 0.25);
 }
 
-.nc-clear-btn {
-  background-color: alpha(#ffffff, 0.05);
-  border-radius: 12px;
-  padding: 12px 16px;
-  border: none;
-  transition: all 200ms ease;
-}
+.nc-clear-btn { padding: 10px 16px; }
 
-.nc-clear-btn:hover {
-  background-color: alpha(#ffffff, 0.1);
-}
-
-.nc-trash-icon {
-  color: alpha(#ffffff, 0.7);
-  -gtk-icon-style: symbolic;
-}
+.nc-trash-icon  { color: alpha(@fg, 0.75); -gtk-icon-style: symbolic; }
 
 .nc-clear-label {
-  font-size: 14px;
-  font-weight: 400;
-  color: alpha(#ffffff, 0.7);
+  font-size: 12px;
+  font-weight: 500;
+  color: alpha(@fg, 0.75);
 }
 
 .nc-clear-btn:hover .nc-trash-icon,
 .nc-clear-btn:hover .nc-clear-label {
-  color: #ffffff;
+  color: @fg;
 }
 
-/* ==================== PROGRESS BAR ==================== */
-.nc-card-progress {
-  background-color: alpha(#ffffff, 0.1);
+.nc-card-progress,
+.popup-progress {
+  background-color: alpha(@surface, 0.65);
   border-radius: 4px;
-  min-height: 4px;
+  min-height: 6px;
 }
 
-.nc-card-progress progress {
-  background-color: #60a5fa;
+.nc-card-progress progress,
+.popup-progress progress {
+  background-color: @accent;
   border-radius: 4px;
+  min-height: 6px;
 }
 
-/* ==================== ACTION BUTTONS ==================== */
-.nc-card-actions {
-  margin-top: 8px;
-}
+.nc-card-actions { margin-top: 8px; }
 
-.nc-action-btn {
-  background-color: alpha(#ffffff, 0.08);
-  border-radius: 8px;
+.nc-action-btn,
+.popup-action-btn {
   padding: 6px 12px;
-  border: none;
   font-size: 12px;
   font-weight: 500;
-  color: alpha(#ffffff, 0.8);
+  color: alpha(@fg, 0.75);
 }
 
-.nc-action-btn:hover {
-  background-color: alpha(#ffffff, 0.15);
-  color: #ffffff;
+.nc-action-btn:hover,
+.popup-action-btn:hover {
+  color: @fg;
 }
 
-/* ==================== POPUP STYLES ==================== */
-.popup-container {
-  background-color: alpha(#ffffff, 0.1);
-  border: 1px solid alpha(#ffffff, 0.2);
-  border-radius: 16px;
-  padding: 16px;
-}
-
-.popup-header {
-  margin-bottom: 8px;
-}
-
-.popup-app-icon {
-  color: alpha(#ffffff, 0.7);
-  -gtk-icon-style: symbolic;
-}
+/* ===========================================================================
+ * NOTIFICATION POPUPS
+ * ===========================================================================*/
+.popup-header   { margin-bottom: 8px; }
+.popup-app-icon { color: alpha(@fg, 0.75); -gtk-icon-style: symbolic; }
 
 .popup-app-name {
-  font-size: 12px;
-  font-weight: 400;
-  color: alpha(#ffffff, 0.6);
+  font-size: 11px;
+  color: alpha(@fg, 0.55);
 }
 
 .popup-close {
   background-color: transparent;
-  border: none;
+  border-color: transparent;
   padding: 4px 8px;
-  border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: alpha(#ffffff, 0.5);
+  color: alpha(@fg, 0.40);
   min-width: 20px;
   min-height: 20px;
 }
 
 .popup-close:hover {
-  background-color: alpha(#ffffff, 0.1);
-  color: #ffffff;
+  background-color: alpha(@accent, 0.22);
+  color: @fg;
 }
 
 .popup-summary {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  color: #ffffff;
+  color: @fg;
 }
 
 .popup-body {
-  font-size: 13px;
-  font-weight: 400;
-  color: alpha(#ffffff, 0.7);
+  font-size: 12px;
+  color: alpha(@fg, 0.75);
   margin-top: 4px;
 }
 
-.popup-image {
-  border-radius: 8px;
-}
-
-.popup-progress {
-  background-color: alpha(#ffffff, 0.1);
-  border-radius: 4px;
-  min-height: 4px;
-  margin-top: 8px;
-}
-
-.popup-progress progress {
-  background-color: #60a5fa;
-  border-radius: 4px;
-}
-
-.popup-actions {
-  margin-top: 12px;
-}
-
-.popup-action-btn {
-  background-color: alpha(#ffffff, 0.08);
-  border-radius: 8px;
-  padding: 6px 12px;
-  border: none;
-  font-size: 12px;
-  font-weight: 500;
-  color: alpha(#ffffff, 0.8);
-}
-
-.popup-action-btn:hover {
-  background-color: alpha(#ffffff, 0.15);
-  color: #ffffff;
-}
-
-/* Urgency styles for popups */
-.urgency-low {
-  border-left: 3px solid alpha(#60a5fa, 0.5);
-}
-
-.urgency-critical {
-  border-left: 3px solid #f87171;
-}
+.popup-image    { border-radius: 10px; }
+.popup-progress { margin-top: 8px; }
+.popup-actions  { margin-top: 12px; }
 
 /* ===========================================================================
- * VOLUME OSD / BRIGHTNESS OSD
+ * VOLUME / BRIGHTNESS OSD
  * ===========================================================================*/
-.osd-container {
-  background-color: alpha(#141618, 0.75);
-  border: 1px solid alpha(#57595c, 0.3);
-  border-radius: 24px;
-  padding: 12px 20px;
-  min-width: 200px;
-}
-
-.osd-icon {
-  color: #fcfcfc;
-  opacity: 0.9;
-}
-
-.osd-icon.muted {
-  color: #ed8796;
-  opacity: 0.7;
-}
-
-.osd-scale {
-  margin: 0 4px;
-}
+.osd-icon       { color: @fg; opacity: 0.9; }
+.osd-icon.muted { color: @red; opacity: 0.7; }
+.osd-scale      { margin: 0 4px; }
 
 .osd-scale trough {
-  background: alpha(#292c30, 0.8);
+  background-color: alpha(@surface, 0.65);
   border-radius: 4px;
-  min-height: 8px;
+  min-height: 6px;
 }
 
 .osd-scale highlight {
-  background: #3daee9;
+  background-color: @accent;
   border-radius: 4px;
-  min-height: 8px;
+  min-height: 6px;
 }
 
-.osd-scale.muted highlight {
-  background: alpha(#ed8796, 0.6);
-}
+.osd-scale.muted highlight { background-color: alpha(@red, 0.6); }
 
+/* display-only: no knob */
 .osd-scale slider {
   background: transparent;
   border: none;
@@ -1301,134 +715,808 @@ switch slider {
 }
 
 .osd-percent {
-  color: alpha(#fcfcfc, 0.7);
-  font-size: 13px;
+  color: alpha(@fg, 0.75);
+  font-size: 12px;
   font-weight: 500;
   font-family: monospace;
 }
-/* ==================== NETWORK MENU ==================== */
-/* Append to crates/widgets/style.css. Reuses .widget-container, .section-title. */
 
-.network-header {
-  padding: 4px 4px 12px 4px;
-}
-.network-header-icon {
-  color: #a8c7fa;
-}
+/* ===========================================================================
+ * NETWORK MENU
+ * ===========================================================================*/
+.network-header      { padding: 0 0 12px 0; }
+.network-header-icon { color: @accent; }
+
 .network-title {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  color: #e3e2e6;
-}
-.network-status {
-  font-size: 12px;
-  color: alpha(#fcfcfc, 0.55);
+  color: @fg;
 }
 
-.network-actions {
-  padding: 8px 4px 6px 4px;
+.network-status {
+  font-size: 11px;
+  color: alpha(@fg, 0.55);
 }
+
+.network-actions { padding: 8px 0 6px 0; }
+
 .network-rescan-btn {
   padding: 6px;
-  border-radius: 10px;
-  background-color: alpha(#fcfcfc, 0.06);
-  border: none;
   min-width: 32px;
   min-height: 32px;
 }
-.network-rescan-btn:hover {
-  background-color: alpha(#fcfcfc, 0.12);
-}
-.network-rescan-btn image {
-  color: alpha(#fcfcfc, 0.8);
-}
 
-.network-list {
-  padding: 2px;
-}
+.network-rescan-btn image { color: alpha(@fg, 0.75); }
+
+.network-list { padding: 0; }
 
 .network-row {
-  padding: 8px 10px;
+  padding: 8px 12px;
   border-radius: 12px;
   background-color: transparent;
-  border: none;
+  border: 1px solid transparent;
 }
-.network-row:hover {
-  background-color: alpha(#fcfcfc, 0.08);
-}
+
 .network-row.active {
-  background-color: alpha(#a8c7fa, 0.16);
+  background-color: alpha(@accent, 0.16);
+  border-color: alpha(@accent, 0.35);
 }
-.network-signal {
-  color: #a8c7fa;
-}
+
+.network-signal { color: @accent; }
+
 .network-ssid {
   font-size: 13px;
   font-weight: 500;
-  color: #e3e2e6;
+  color: @fg;
 }
+
 .network-row-sub {
   font-size: 11px;
-  color: alpha(#fcfcfc, 0.5);
+  color: alpha(@fg, 0.55);
 }
-.network-row.active .network-row-sub {
-  color: #a8c7fa;
-}
-.network-lock {
-  color: alpha(#fcfcfc, 0.5);
-}
+
+.network-row.active .network-row-sub { color: @accent; }
+.network-lock { color: alpha(@fg, 0.55); }
+
 .network-empty {
   padding: 16px;
-  color: alpha(#fcfcfc, 0.5);
+  color: alpha(@fg, 0.40);
   font-size: 12px;
 }
 
-/* Popovers (password entry + right-click options) */
-.network-popover {
-  padding: 6px;
-}
-.network-popover contents {
-  background-color: alpha(#1a1c1e, 0.96);
-  border: 1px solid alpha(#57595c, 0.3);
-  border-radius: 14px;
-  padding: 8px;
-}
+.network-popover { padding: 6px; }
+
 .network-popover-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #e3e2e6;
+  color: alpha(@accent, 0.85);
   margin-bottom: 4px;
 }
+
 .network-connect-btn {
   margin-top: 4px;
   padding: 6px 12px;
-  border-radius: 10px;
-  background-color: #a8c7fa;
-  color: #06234b;
+  background-color: @accent;
+  color: @accent_fg;
   font-weight: 600;
-  border: none;
-}
-.network-connect-btn:hover {
-  background-color: #bcd4fb;
-}
-.network-menu-item {
-  padding: 8px 14px;
-  border-radius: 8px;
-  background-color: transparent;
-  border: none;
-  color: #e3e2e6;
-  font-size: 13px;
-}
-.network-menu-item:hover {
-  background-color: alpha(#fcfcfc, 0.1);
-}
-.network-menu-item.destructive {
-  color: #ed8796;
-}
-.network-menu-item.destructive:hover {
-  background-color: alpha(#ed8796, 0.15);
 }
 
-.network-switch slider {
-  background-color: #ffffff;
+.network-connect-btn:hover { background-color: alpha(@accent, 0.85); }
+
+.network-menu-item {
+  padding: 8px 12px;
+  background-color: transparent;
+  border-color: transparent;
+  color: @fg;
+  font-size: 12px;
+}
+
+.network-menu-item:hover             { background-color: alpha(@accent, 0.22); }
+.network-menu-item.destructive       { color: @red; }
+.network-menu-item.destructive:hover { background-color: alpha(@red, 0.15); }
+
+.network-switch slider { background-color: @fg; }
+
+/* ===========================================================================
+ * CONTROL CENTER - "Liquid Glass Control Center" (Figma Make design)
+ * Values from the design's index.css; rgba(255,255,255,x) -> alpha(@fg, x),
+ * rgba(0,0,0,x) -> alpha(@shadow, x). Active states: graphite white.
+ * backdrop-filter is Hyprland's blur; outer drop shadows are omitted (a
+ * layer surface can't draw outside itself).
+ * ===========================================================================*/
+
+.widget-container.cc-panel {
+  padding: 19px;
+  border-radius: 28px;
+  border: 1px solid alpha(@fg, 0.22);
+  background-color: alpha(@shadow, 0.35);
+  background-image:
+    radial-gradient(circle at 8% 0%, alpha(@fg, 0.16), transparent 28%),
+    radial-gradient(ellipse at 100% 15%, alpha(@fg, 0.08), transparent 33%),
+    linear-gradient(115deg, alpha(@fg, 0.11), transparent 18%, transparent 72%, alpha(@fg, 0.035)),
+    linear-gradient(145deg, alpha(@fg, 0.09), alpha(@fg, 0.018) 48%, alpha(@fg, 0.06));
+  box-shadow:
+    inset 0 1px alpha(@fg, 0.30),
+    inset 1px 0 alpha(@fg, 0.12),
+    inset -1px 0 alpha(@fg, 0.04),
+    inset 0 -1px alpha(@shadow, 0.28);
+}
+
+/* -- heading ---------------------------------------------------------------*/
+.cc-heading { padding: 1px 3px 17px 5px; }
+
+.cc-date {
+  color: alpha(@fg, 0.64);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.66px;
+}
+
+.cc-clock {
+  margin-top: 2px;
+  color: @fg;
+  font-size: 25px;
+  font-weight: 500;
+  letter-spacing: -1.4px;
+}
+
+/* -- glass card ------------------------------------------------------------*/
+.cc-card {
+  border: 1px solid alpha(@fg, 0.20);
+  background-color: alpha(@shadow, 0.20);
+  background-image:
+    radial-gradient(circle at 12% 0%, alpha(@fg, 0.17), transparent 34%),
+    linear-gradient(135deg, alpha(@fg, 0.10), alpha(@fg, 0.025) 55%, alpha(@fg, 0.07));
+  box-shadow:
+    inset 0 1px alpha(@fg, 0.26),
+    inset 1px 0 alpha(@fg, 0.10),
+    inset 0 -1px alpha(@shadow, 0.16);
+  color: @fg;
+}
+
+/* -- connectivity ----------------------------------------------------------*/
+.cc-connectivity {
+  padding: 6px 13px;
+  border-radius: 20px;
+}
+
+.cc-connection-row { min-height: 65px; }
+
+separator.cc-hairline {
+  min-height: 1px;
+  margin: 0 0 0 53px;
+  background: alpha(@fg, 0.09);
+}
+
+.cc-feature-icon,
+.cc-tile-icon {
+  color: alpha(@fg, 0.78);
+  background-color: alpha(@fg, 0.10);
+  border: 1px solid alpha(@fg, 0.10);
+  box-shadow: inset 0 1px alpha(@fg, 0.10);
+  transition: all 200ms ease;
+}
+
+.cc-feature-icon {
+  min-width: 41px;
+  min-height: 41px;
+  border-radius: 14px;
+}
+
+.cc-feature-icon.on {
+  color: @accent_fg;
+  border-color: alpha(@fg, 0.50);
+  background-color: alpha(@fg, 0.88);
+  background-image: linear-gradient(145deg, alpha(@fg, 0.98), alpha(@accent, 0.80));
+  box-shadow: inset 0 1px alpha(@fg, 0.60);
+}
+
+button.cc-feature-copy,
+button.cc-feature-copy:hover {
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+}
+
+.cc-feature-title,
+.cc-tile-title {
+  color: @fg;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cc-feature-sub,
+.cc-tile-state {
+  margin-top: 2px;
+  color: alpha(@fg, 0.54);
+  font-size: 10.5px;
+}
+
+/* switch 38x22 */
+switch.cc-switch {
+  min-width: 38px;
+  min-height: 22px;
+  padding: 0;
+  border: 1px solid alpha(@fg, 0.12);
+  border-radius: 99px;
+  background-color: alpha(@shadow, 0.38);
+  background-image: none;
+  box-shadow: none;
+  transition: all 200ms ease;
+}
+
+switch.cc-switch:checked {
+  border-color: alpha(@fg, 0.55);
+  background-color: alpha(@accent, 0.92);
+}
+
+switch.cc-switch slider {
+  min-width: 14px;
+  min-height: 14px;
+  margin: 3px;
+  border: none;
+  border-radius: 50%;
+  background-color: alpha(@fg, 0.75);
+  box-shadow: 0 2px 5px alpha(@shadow, 0.22);
+}
+
+switch.cc-switch:checked slider {
+  background-color: @fg;
+  box-shadow: 0 1px 4px alpha(@shadow, 0.45), 0 0 0 1px alpha(@shadow, 0.12);
+}
+
+switch.cc-switch image { color: transparent; }
+
+button.cc-detail-button {
+  min-width: 27px;
+  min-height: 27px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: alpha(@fg, 0.48);
+}
+
+button.cc-detail-button:hover {
+  background-color: alpha(@fg, 0.15);
+  color: @fg;
+}
+
+/* -- quick tiles -----------------------------------------------------------*/
+.cc-quick-grid { margin: 10px 0; }
+
+button.cc-tile {
+  min-height: 73px;
+  padding: 12px;
+  border-radius: 18px;
+  color: @fg;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+button.cc-tile:hover {
+  background-color: alpha(@shadow, 0.20);
+  border-color: alpha(@fg, 0.28);
+}
+
+.cc-tile-icon {
+  min-width: 39px;
+  min-height: 39px;
+  border-radius: 13px;
+}
+
+button.cc-tile.selected {
+  border-color: alpha(@fg, 0.45);
+  background-image: linear-gradient(145deg, alpha(@fg, 0.30), alpha(@fg, 0.13));
+}
+
+button.cc-tile.selected .cc-tile-icon {
+  color: @accent_fg;
+  border-color: alpha(@fg, 0.60);
+  background-color: alpha(@fg, 0.92);
+}
+
+/* -- levels ----------------------------------------------------------------*/
+.cc-levels {
+  padding: 14px;
+  border-radius: 20px;
+}
+
+.cc-level-title {
+  margin: 0 2px 8px;
+  color: alpha(@fg, 0.62);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.cc-level-title-second { margin-top: 15px; }
+
+.cc-slider-icon {
+  min-width: 24px;
+  color: alpha(@fg, 0.78);
+}
+
+scale.cc-slider {
+  min-height: 24px;
+  margin: 0;
+  padding: 0;
+}
+
+scale.cc-slider trough {
+  min-height: 5px;
+  border: none;
+  border-radius: 9px;
+  background-color: alpha(@fg, 0.14);
+  box-shadow: inset 0 1px 2px alpha(@shadow, 0.15);
+}
+
+scale.cc-slider highlight {
+  min-height: 5px;
+  border-radius: 9px;
+  background-color: alpha(@fg, 0.88);
+}
+
+scale.cc-slider slider {
+  min-width: 11px;
+  min-height: 11px;
+  margin: -5px;
+  border: 2px solid alpha(@fg, 0.85);
+  border-radius: 50%;
+  background-color: @fg;
+  box-shadow: 0 2px 8px alpha(@shadow, 0.40);
+}
+
+scale.cc-slider.muted highlight { background-color: alpha(@fg, 0.30); }
+scale.cc-slider:disabled { opacity: 0.45; }
+
+button.cc-output-row {
+  margin-top: 12px;
+  padding: 10px 3px 1px;
+  border: none;
+  border-top: 1px solid alpha(@fg, 0.08);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: @fg;
+}
+
+button.cc-output-row:hover { background: transparent; }
+button.cc-output-row:hover .cc-chevron { color: @fg; }
+
+.cc-output-icon {
+  min-width: 29px;
+  min-height: 29px;
+  border-radius: 10px;
+  background-color: alpha(@fg, 0.09);
+  color: @fg;
+}
+
+.cc-output-title {
+  color: @fg;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.cc-output-sub {
+  color: alpha(@fg, 0.45);
+  font-size: 9px;
+}
+
+.cc-chevron { color: alpha(@fg, 0.42); }
+
+/* -- now playing -----------------------------------------------------------*/
+.cc-media {
+  margin-top: 10px;
+  padding: 11px;
+  border-radius: 20px;
+}
+
+.cc-media.inactive .cc-track-title,
+.cc-media.inactive .cc-media-actions {
+  opacity: 0.55;
+}
+
+.cc-album-art {
+  min-width: 49px;
+  min-height: 49px;
+  border: 1px solid alpha(@fg, 0.25);
+  border-radius: 13px;
+  background-image: linear-gradient(145deg, alpha(@surface, 0.95) 20%, alpha(@fg, 0.30) 77%, alpha(@fg, 0.45));
+}
+
+.cc-track-kicker {
+  margin-bottom: 3px;
+  color: alpha(@fg, 0.43);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.cc-track-title {
+  color: @fg;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.cc-track-artist {
+  color: alpha(@fg, 0.52);
+  font-size: 9.5px;
+}
+
+button.cc-media-btn {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: @fg;
+}
+
+button.cc-media-btn:hover { background-color: alpha(@fg, 0.09); }
+
+button.cc-media-btn.play {
+  background-color: alpha(@fg, 0.90);
+  color: @accent_fg;
+}
+
+button.cc-media-btn.play:hover { background-color: @fg; }
+
+/* -- footer ----------------------------------------------------------------*/
+.cc-footer { margin: 13px 2px 0; }
+
+button.cc-footer-btn {
+  padding: 7px 10px;
+  border: 1px solid alpha(@fg, 0.10);
+  border-radius: 10px;
+  background-color: alpha(@fg, 0.07);
+  box-shadow: none;
+  color: alpha(@fg, 0.72);
+  font-size: 10px;
+}
+
+button.cc-footer-btn:hover {
+  background-color: alpha(@fg, 0.15);
+  border-color: alpha(@fg, 0.16);
+  color: @fg;
+}
+
+/* -- sub-views (sound outputs, bluetooth) ----------------------------------*/
+.cc-subheader { margin: 0 0 12px; }
+
+.cc-subtitle {
+  color: @fg;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cc-list-card {
+  padding: 6px;
+  border-radius: 20px;
+}
+
+button.cc-list-row {
+  padding: 10px 12px;
+  border: none;
+  border-radius: 14px;
+  background: transparent;
+  box-shadow: none;
+  color: @fg;
+}
+
+button.cc-list-row:hover    { background-color: alpha(@fg, 0.08); }
+button.cc-list-row.selected { background-color: alpha(@fg, 0.12); }
+
+.bluetooth-header { margin-bottom: 12px; }
+
+.bluetooth-title {
+  color: @fg;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bluetooth-back-btn,
+.bluetooth-scan-btn {
+  min-width: 27px;
+  min-height: 27px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 10px;
+  background-color: alpha(@fg, 0.07);
+  box-shadow: none;
+  color: alpha(@fg, 0.72);
+}
+
+.bluetooth-section-header,
+.bluetooth-section-label {
+  margin: 10px 2px 6px;
+  color: alpha(@fg, 0.62);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.bluetooth-device {
+  padding: 8px 10px;
+  border-radius: 14px;
+}
+
+.bluetooth-device-row:hover .bluetooth-device { background-color: alpha(@fg, 0.08); }
+.bluetooth-device-icon           { color: alpha(@fg, 0.78); }
+.bluetooth-device-icon.connected { color: @fg; }
+
+.bluetooth-device-name {
+  color: @fg;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bluetooth-device-status {
+  color: alpha(@fg, 0.50);
+  font-size: 10px;
+}
+
+.bluetooth-device-status.connected { color: alpha(@fg, 0.80); }
+
+.bluetooth-empty,
+.bluetooth-hint {
+  margin: 12px;
+  color: alpha(@fg, 0.45);
+  font-size: 11px;
+}
+
+.bluetooth-device-list,
+.bluetooth-device-list row {
+  background: transparent;
+}
+
+/* ===========================================================================
+ * NOTIFICATION CENTER - "Liquid Glass" design (panel = .cc-panel, cards =
+ * .cc-card, switch = .cc-switch from the control center above)
+ * ===========================================================================*/
+
+.nc-heading {
+  min-height: 54px;
+  padding: 1px 1px 14px 4px;
+}
+
+.nc-eyebrow {
+  color: alpha(@fg, 0.55);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.81px;
+}
+
+.nc-greeting {
+  margin-top: 2px;
+  color: @fg;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.9px;
+}
+
+button.nc-round-btn {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 1px solid alpha(@fg, 0.12);
+  border-radius: 50%;
+  background-color: alpha(@fg, 0.08);
+  box-shadow: none;
+  color: @fg;
+}
+
+button.nc-round-btn:hover { background-color: alpha(@fg, 0.15); }
+
+/* -- date card -------------------------------------------------------------*/
+.nc-date-card {
+  min-height: 72px;
+  padding: 11px 13px;
+  border-radius: 19px;
+}
+
+.nc-date-number {
+  min-width: 48px;
+  color: @fg;
+  font-size: 31px;
+  font-weight: 500;
+  letter-spacing: -2.2px;
+}
+
+.nc-date-copy {
+  padding-left: 12px;
+  border-left: 1px solid alpha(@fg, 0.12);
+}
+
+.nc-weekday {
+  color: @fg;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nc-month {
+  color: alpha(@fg, 0.52);
+  font-size: 10px;
+}
+
+.nc-weather { color: alpha(@fg, 0.78); }
+
+.nc-weather-temp {
+  color: @fg;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nc-weather-cond {
+  color: alpha(@fg, 0.46);
+  font-size: 9px;
+}
+
+/* -- sections --------------------------------------------------------------*/
+.nc-section-label {
+  min-height: 21px;
+  padding: 12px 4px 7px;
+}
+
+.nc-section-title {
+  color: alpha(@fg, 0.60);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.72px;
+}
+
+button.nc-clear-all {
+  min-height: 0;
+  padding: 3px 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: alpha(@fg, 0.53);
+  font-size: 9px;
+}
+
+button.nc-clear-all:hover {
+  background: transparent;
+  color: @fg;
+}
+
+.nc-scroller undershoot,
+.nc-scroller overshoot { background: none; }
+
+/* -- notification card -----------------------------------------------------*/
+.nc-notice {
+  min-height: 58px;
+  padding: 12px 34px 12px 11px;
+  border-radius: 18px;
+}
+
+.nc-notice-icon {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid alpha(@fg, 0.16);
+  border-radius: 12px;
+  background-color: alpha(@fg, 0.10);
+  box-shadow: inset 0 1px alpha(@fg, 0.25);
+  color: @fg;
+}
+
+/* category colours from the design (identify the kind, not themed) */
+.nc-kind-message  { background-image: linear-gradient(145deg, rgba(92, 193, 136, 0.96), rgba(37, 130, 91, 0.92)); }
+.nc-kind-update   { background-image: linear-gradient(145deg, rgba(105, 166, 236, 0.96), rgba(69, 91, 178, 0.92)); }
+.nc-kind-capture  { background-image: linear-gradient(145deg, rgba(151, 156, 169, 0.86), rgba(78, 82, 94, 0.90)); }
+.nc-kind-critical { background-image: linear-gradient(145deg, rgba(226, 104, 104, 0.95), rgba(150, 48, 64, 0.92)); }
+
+.nc-notice-app {
+  color: @fg;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.nc-notice-time {
+  color: alpha(@fg, 0.38);
+  font-size: 8.5px;
+}
+
+.nc-notice-summary {
+  margin: 5px 0 2px;
+  color: @fg;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.nc-notice-body {
+  margin-top: 2px;
+  color: alpha(@fg, 0.48);
+  font-size: 9.5px;
+}
+
+progressbar.nc-notice-progress { margin: 8px 0 0; }
+
+button.nc-notice-action {
+  min-height: 0;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border: 1px solid alpha(@fg, 0.14);
+  border-radius: 8px;
+  background-color: alpha(@fg, 0.08);
+  box-shadow: none;
+  color: alpha(@fg, 0.82);
+  font-size: 8.5px;
+  font-weight: 600;
+}
+
+button.nc-notice-action:hover { background-color: alpha(@fg, 0.14); }
+
+button.nc-notice-dismiss {
+  min-width: 23px;
+  min-height: 23px;
+  margin: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: alpha(@fg, 0.40);
+}
+
+button.nc-notice-dismiss:hover {
+  background-color: alpha(@fg, 0.10);
+  color: @fg;
+}
+
+/* -- empty state -----------------------------------------------------------*/
+.nc-caught-up {
+  min-height: 220px;
+  color: alpha(@fg, 0.58);
+}
+
+.nc-caught-up-icon {
+  min-width: 45px;
+  min-height: 45px;
+  margin-bottom: 11px;
+  border: 1px solid alpha(@fg, 0.12);
+  border-radius: 15px;
+  background-color: alpha(@fg, 0.06);
+  color: alpha(@fg, 0.58);
+}
+
+.nc-caught-up-title {
+  color: alpha(@fg, 0.58);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.nc-caught-up-sub {
+  margin-top: 3px;
+  color: alpha(@fg, 0.38);
+  font-size: 9px;
+}
+
+/* -- do not disturb --------------------------------------------------------*/
+.nc-dnd-row {
+  margin-top: 12px;
+  padding: 11px 4px 1px;
+  border-top: 1px solid alpha(@fg, 0.09);
+}
+
+.nc-dnd-icon {
+  min-width: 30px;
+  min-height: 30px;
+  border-radius: 10px;
+  background-color: alpha(@fg, 0.07);
+  color: alpha(@fg, 0.72);
+}
+
+.nc-dnd-title {
+  color: @fg;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.nc-dnd-sub {
+  color: alpha(@fg, 0.40);
+  font-size: 8.5px;
 }

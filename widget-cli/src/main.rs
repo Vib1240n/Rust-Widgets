@@ -47,6 +47,20 @@ enum Commands {
         /// Widget name (optional)
         widget: Option<String>,
     },
+    /// Select a theme ("rw theme list" shows them). Built-ins are read-only:
+    /// this copies one to ~/.config/rw/themes/<name>/ (or, with --global,
+    /// ~/.config/rustapp-theme/themes/<name>/ for all rust apps) to edit.
+    /// Changes apply live.
+    Theme {
+        /// Theme name, or "list"
+        name: String,
+        /// Apply to every rust app (rw, launch-gui, cliphist-gui)
+        #[arg(long)]
+        global: bool,
+        /// Overwrite your edited copy with a fresh one from the built-in
+        #[arg(long)]
+        reset: bool,
+    },
 }
 
 fn main() {
@@ -61,6 +75,26 @@ fn main() {
         Commands::Reload { widget } => reload_config(widget),
         Commands::Restart { widget } => restart_widget(&widget),
         Commands::Config { widget } => show_config_path(widget),
+        Commands::Theme { name, global, reset } => cmd_theme(&name, global, reset),
+    }
+}
+
+fn cmd_theme(name: &str, global: bool, reset: bool) {
+    use widget_core::theme;
+    if name == "list" {
+        let current = theme::current_name();
+        for (n, origin) in theme::list() {
+            let mark = if n == current { "*" } else { " " };
+            println!("{mark} {n:<20} {origin}");
+        }
+        return;
+    }
+    match theme::set_theme(name, global, reset) {
+        Ok(msg) => println!("{msg}"),
+        Err(e) => {
+            eprintln!("{e}");
+            std::process::exit(1);
+        }
     }
 }
 

@@ -268,6 +268,8 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
     let store_clone = store.clone();
     let panel_clone = panel.clone();
     let dbus_response_tx_clone = dbus_response_tx.clone();
+    let dnd_panel = dnd_enabled.clone();
+    panel.set_dnd(*dnd_enabled.borrow());
 
     glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
         while let Ok(action) = panel_action_rx.try_recv() {
@@ -300,14 +302,9 @@ fn build_ui(app: &Application, listener: Rc<RefCell<UnixListener>>) {
                     let _ = dbus_response_tx_clone
                         .send(NotificationResponse::ActionInvoked { id, action_key });
                 }
-                PanelAction::OpenSettings => {
-                    let config_path = Config::config_path();
-                    if let Err(e) = std::process::Command::new("xdg-open")
-                        .arg(&config_path)
-                        .spawn()
-                    {
-                        tracing::warn!("Failed to open settings: {}", e);
-                    }
+                PanelAction::SetDnd(on) => {
+                    *dnd_panel.borrow_mut() = on;
+                    tracing::info!("DND {}", if on { "on" } else { "off" });
                 }
             }
         }

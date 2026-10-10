@@ -1,193 +1,181 @@
+//! Now Playing card: art, NOW PLAYING / title / artist, prev · play · next.
+//! One `playerctl` call per tick; album art loaded off the UI thread
+//! (file:// directly, http(s):// through GIO) and only when it changes.
+
+use crate::icons::Icon;
+use crate::sys;
 use gtk4::prelude::*;
-use gtk4::{Box, Button, Image, Label, Orientation};
+use gtk4::{gdk, glib, Align, Box, Button, Label, Orientation, Overflow, Picture};
 use std::cell::RefCell;
-use std::process::Command;
+use std::rc::Rc;
 
-thread_local! {
-    static MEDIA_CONTAINER: RefCell<Option<Box>> = RefCell::new(None);
-    static TITLE_LABEL: RefCell<Option<Label>> = RefCell::new(None);
-    static ARTIST_LABEL: RefCell<Option<Label>> = RefCell::new(None);
-    static PLAY_BTN: RefCell<Option<Button>> = RefCell::new(None);
+#[derive(Clone)]
+pub struct Media {
+    card: Box,
+    art: Picture,
+    title: Label,
+    artist: Label,
+    play_icon: Icon,
+    art_url: Rc<RefCell<String>>,
 }
 
-pub fn build() -> Box {
-    let container = Box::new(Orientation::Vertical, 8);
-    container.add_css_class("media-section");
-
-    let info = get_media_info();
-    if info.is_none() {
-        container.add_css_class("inactive");
-    }
-
-    // Top row: art + info
-    let top_row = Box::new(Orientation::Horizontal, 0);
-
-    let art = Image::from_icon_name("audio-x-generic-symbolic");
-    art.add_css_class("media-art");
-    art.set_pixel_size(48);
-    top_row.append(&art);
-
-    let info_box = Box::new(Orientation::Vertical, 2);
-    info_box.add_css_class("media-info");
-    info_box.set_valign(gtk4::Align::Center);
-    info_box.set_hexpand(true);
-
-    let title = Label::new(Some("No media playing"));
-    title.add_css_class("media-title");
-    title.set_halign(gtk4::Align::Start);
-    title.set_ellipsize(gtk4::pango::EllipsizeMode::End);
-    title.set_max_width_chars(25);
-    info_box.append(&title);
-
-    let artist = Label::new(Some(""));
-    artist.add_css_class("media-artist");
-    artist.set_halign(gtk4::Align::Start);
-    artist.set_ellipsize(gtk4::pango::EllipsizeMode::End);
-    artist.set_max_width_chars(30);
-    info_box.append(&artist);
-
-    top_row.append(&info_box);
-    container.append(&top_row);
-
-    // Controls row
-    let controls = Box::new(Orientation::Horizontal, 4);
-    controls.add_css_class("media-controls");
-    controls.set_halign(gtk4::Align::Center);
-
-    let prev_btn = Button::new();
-    prev_btn.add_css_class("media-btn");
-    prev_btn.set_child(Some(&Image::from_icon_name("media-skip-backward-symbolic")));
-    prev_btn.connect_clicked(|_| media_prev());
-    controls.append(&prev_btn);
-
-    let play_btn = Button::new();
-    play_btn.add_css_class("media-btn");
-    play_btn.add_css_class("play");
-    play_btn.set_child(Some(&Image::from_icon_name(
-        "media-playback-start-symbolic",
-    )));
-    play_btn.connect_clicked(|_| media_play_pause());
-    controls.append(&play_btn);
-
-    let next_btn = Button::new();
-    next_btn.add_css_class("media-btn");
-    next_btn.set_child(Some(&Image::from_icon_name("media-skip-forward-symbolic")));
-    next_btn.connect_clicked(|_| media_next());
-    controls.append(&next_btn);
-
-    container.append(&controls);
-
-    // Store refs for updates
-    MEDIA_CONTAINER.with(|c| *c.borrow_mut() = Some(container.clone()));
-    TITLE_LABEL.with(|t| *t.borrow_mut() = Some(title));
-    ARTIST_LABEL.with(|a| *a.borrow_mut() = Some(artist));
-    PLAY_BTN.with(|p| *p.borrow_mut() = Some(play_btn));
-
-    // Initial update
-    update();
-
-    container
-}
-
-pub fn update() {
-    if let Some(info) = get_media_info() {
-        MEDIA_CONTAINER.with(|c| {
-            if let Some(container) = c.borrow().as_ref() {
-                container.remove_css_class("inactive");
-            }
-        });
-
-        TITLE_LABEL.with(|t| {
-            if let Some(label) = t.borrow().as_ref() {
-                label.set_text(&info.title);
-            }
-        });
-
-        ARTIST_LABEL.with(|a| {
-            if let Some(label) = a.borrow().as_ref() {
-                label.set_text(&info.artist);
-            }
-        });
-
-        PLAY_BTN.with(|p| {
-            if let Some(btn) = p.borrow().as_ref() {
-                let icon_name = if info.playing {
-                    "media-playback-pause-symbolic"
-                } else {
-                    "media-playback-start-symbolic"
-                };
-                btn.set_child(Some(&Image::from_icon_name(icon_name)));
-            }
-        });
-    } else {
-        MEDIA_CONTAINER.with(|c| {
-            if let Some(container) = c.borrow().as_ref() {
-                container.add_css_class("inactive");
-            }
-        });
-
-        TITLE_LABEL.with(|t| {
-            if let Some(label) = t.borrow().as_ref() {
-                label.set_text("No media playing");
-            }
-        });
-
-        ARTIST_LABEL.with(|a| {
-            if let Some(label) = a.borrow().as_ref() {
-                label.set_text("");
-            }
-        });
-    }
-}
-
-struct MediaInfo {
+struct Info {
+    playing: bool,
     title: String,
     artist: String,
-    playing: bool,
+    art: String,
 }
 
-fn get_media_info() -> Option<MediaInfo> {
-    let status = Command::new("playerctl").args(["status"]).output().ok()?;
-
-    if !status.status.success() {
-        return None;
+fn ctl_button(icon: &'static str, class: &str, cmd: &'static str) -> (Button, Icon) {
+    let b = Button::new();
+    b.add_css_class("cc-media-btn");
+    if !class.is_empty() {
+        b.add_css_class(class);
     }
+    let i = Icon::new(icon, 17);
+    b.set_child(Some(&i.image));
+    b.connect_clicked(move |_| sys::shell(&format!("playerctl {cmd}")));
+    (b, i)
+}
 
-    let playing = String::from_utf8_lossy(&status.stdout).trim() == "Playing";
+pub fn build() -> (Box, Media) {
+    let card = Box::new(Orientation::Horizontal, 11);
+    card.add_css_class("cc-card");
+    card.add_css_class("cc-media");
 
-    let title = Command::new("playerctl")
-        .args(["metadata", "title"])
-        .output()
-        .ok()
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-        .unwrap_or_default();
+    // art: rounded box that clips the picture
+    let frame = Box::new(Orientation::Vertical, 0);
+    frame.add_css_class("cc-album-art");
+    frame.set_overflow(Overflow::Hidden);
+    frame.set_valign(Align::Center);
+    let art = Picture::new();
+    art.set_content_fit(gtk4::ContentFit::Cover);
+    art.set_size_request(49, 49);
+    art.set_can_shrink(true);
+    frame.append(&art);
+    card.append(&frame);
 
-    let artist = Command::new("playerctl")
-        .args(["metadata", "artist"])
-        .output()
-        .ok()
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-        .unwrap_or_default();
+    let track = Box::new(Orientation::Vertical, 0);
+    track.set_hexpand(true);
+    track.set_valign(Align::Center);
+    let kicker = Label::new(Some("NOW PLAYING"));
+    kicker.add_css_class("cc-track-kicker");
+    kicker.set_halign(Align::Start);
+    let title = Label::new(Some("Nothing playing"));
+    title.add_css_class("cc-track-title");
+    title.set_halign(Align::Start);
+    title.set_ellipsize(gtk4::pango::EllipsizeMode::End);
+    title.set_max_width_chars(22);
+    let artist = Label::new(Some(""));
+    artist.add_css_class("cc-track-artist");
+    artist.set_halign(Align::Start);
+    artist.set_ellipsize(gtk4::pango::EllipsizeMode::End);
+    artist.set_max_width_chars(24);
+    track.append(&kicker);
+    track.append(&title);
+    track.append(&artist);
+    card.append(&track);
 
+    let actions = Box::new(Orientation::Horizontal, 2);
+    actions.add_css_class("cc-media-actions");
+    actions.set_valign(Align::Center);
+    let (prev, _) = ctl_button("previous", "", "previous");
+    let (play, play_icon) = ctl_button("play", "play", "play-pause");
+    let (next, _) = ctl_button("next", "", "next");
+    actions.append(&prev);
+    actions.append(&play);
+    actions.append(&next);
+    card.append(&actions);
+
+    let m = Media { card: card.clone(), art, title, artist, play_icon, art_url: Rc::new(RefCell::new(String::new())) };
+    m.poll();
+    (card, m)
+}
+
+fn read() -> Option<Info> {
+    let s = sys::output(
+        "playerctl",
+        &["metadata", "--format", "{{status}}\t{{title}}\t{{artist}}\t{{mpris:artUrl}}"],
+    )?;
+    let mut f = s.trim_end_matches('\n').splitn(4, '\t');
+    let status = f.next()?.to_string();
+    let title = f.next().unwrap_or("").to_string();
     if title.is_empty() {
         return None;
     }
-
-    Some(MediaInfo {
+    Some(Info {
+        playing: status == "Playing",
         title,
-        artist,
-        playing,
+        artist: f.next().unwrap_or("").to_string(),
+        art: f.next().unwrap_or("").to_string(),
     })
 }
 
-fn media_play_pause() {
-    let _ = Command::new("playerctl").args(["play-pause"]).spawn();
+/// Art bytes from file:// or http(s):// (GIO handles remote URIs)
+fn fetch_art(url: &str) -> Option<Vec<u8>> {
+    if let Some(path) = url.strip_prefix("file://") {
+        let decoded = glib::Uri::unescape_string(path, None::<&str>).map(|s| s.to_string()).unwrap_or(path.to_string());
+        return std::fs::read(decoded).ok();
+    }
+    if !(url.starts_with("http://") || url.starts_with("https://")) {
+        return None;
+    }
+    // curl, not GIO: GIO has no https backend on this system
+    let out = std::process::Command::new("curl")
+        .args(["-fsSL", "--max-time", "6", url])
+        .output()
+        .ok()
+        .filter(|o| o.status.success() && !o.stdout.is_empty())?;
+    Some(out.stdout)
 }
 
-fn media_next() {
-    let _ = Command::new("playerctl").args(["next"]).spawn();
-}
+impl Media {
+    pub fn poll(&self) {
+        let m = self.clone();
+        sys::bg(read, move |info| m.show(info));
+    }
 
-fn media_prev() {
-    let _ = Command::new("playerctl").args(["previous"]).spawn();
+    fn show(&self, info: Option<Info>) {
+        let Some(info) = info else {
+            self.card.add_css_class("inactive");
+            self.title.set_text("Nothing playing");
+            self.artist.set_text("");
+            self.play_icon.set_name("play");
+            self.set_art(String::new());
+            return;
+        };
+        self.card.remove_css_class("inactive");
+        if self.title.text() != info.title {
+            self.title.set_text(&info.title);
+        }
+        if self.artist.text() != info.artist {
+            self.artist.set_text(&info.artist);
+        }
+        self.play_icon.set_name(if info.playing { "pause" } else { "play" });
+        self.set_art(info.art);
+    }
+
+    fn set_art(&self, url: String) {
+        if *self.art_url.borrow() == url {
+            return;
+        }
+        *self.art_url.borrow_mut() = url.clone();
+        if url.is_empty() {
+            self.art.set_paintable(None::<&gdk::Paintable>); // CSS gradient shows through
+            return;
+        }
+        let m = self.clone();
+        let want = url.clone();
+        sys::bg(
+            move || fetch_art(&url),
+            move |bytes| {
+                // the track may have changed while loading
+                if *m.art_url.borrow() != want {
+                    return;
+                }
+                let tex = bytes.and_then(|b| gdk::Texture::from_bytes(&glib::Bytes::from_owned(b)).ok());
+                m.art.set_paintable(tex.as_ref());
+            },
+        );
+    }
 }

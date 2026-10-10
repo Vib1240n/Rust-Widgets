@@ -250,6 +250,7 @@ dependencies = [
  "toml 0.8.23",
  "tracing",
  "tracing-subscriber",
+ "widget-core",
 ]
 
 [[package]]
@@ -1169,6 +1170,7 @@ dependencies = [
  "toml 0.8.23",
  "tracing",
  "tracing-subscriber",
+ "widget-core",
 ]
 
 [[package]]
@@ -1185,6 +1187,7 @@ dependencies = [
  "toml 0.8.23",
  "tracing",
  "tracing-subscriber",
+ "widget-core",
  "zbus",
 ]
 
@@ -1918,6 +1921,7 @@ dependencies = [
  "toml 0.8.23",
  "tracing",
  "tracing-subscriber",
+ "widget-core",
 ]
 
 [[package]]

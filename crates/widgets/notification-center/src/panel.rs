@@ -1,16 +1,29 @@
+//! Notification center panel ("Liquid Glass" Figma design).
+//!
+//!   NOTIFICATION CENTER / greeting                      [close]
+//!   date card: 18 | Tuesday, June 2024         weather 22° Clear
+//!   TODAY ............................................ Clear all
+//!   cards (icon tile, app + age, summary, body, actions, x)
+//!   EARLIER ...
+//!   Do not disturb                                      [switch]
+
 use crate::config::Config;
-use crate::notification::{Notification, NotificationStore};
-use gtk4::glib;
+use crate::notification::{Notification, NotificationStore, Urgency};
 use gtk4::prelude::*;
 use gtk4::{
-    Box, Button, Image, Label, ListBox, ListBoxRow, Orientation, PolicyType, ProgressBar,
-    ScrolledWindow,
+    gio, glib, Align, Box, Button, Label, Orientation, Overlay, PolicyType, ProgressBar,
+    ScrolledWindow, Switch,
 };
 use gtk4_layer_shell::{Edge, KeyboardMode, Layer, LayerShell};
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
+use widget_core::icons::Icon;
+
+/// The list scrolls past this height (px)
+const MAX_LIST_HEIGHT: i32 = 540;
 
 /// Actions from the panel
 #[derive(Debug, Clone)]
@@ -19,51 +32,55 @@ pub enum PanelAction {
     ClearAll,
     DismissOne(u32),
     ActionInvoked(u32, String),
-    OpenSettings,
+    SetDnd(bool),
 }
 
-/// The notification center panel
+#[derive(Default)]
+struct Weather {
+    fetched: Option<Instant>,
+    temp: String,
+    cond: String,
+}
+
 pub struct NotificationPanel {
     window: gtk4::Window,
-    list_box: ListBox,
-    header_subtitle: Label,
-    empty_state: Box,
-    footer: Box,
+    list: Box,
+    greeting: Label,
+    day_number: Label,
+    weekday: Label,
+    month: Label,
+    weather_box: Box,
+    weather_temp: Label,
+    weather_cond: Label,
+    dnd: Switch,
+    dnd_syncing: Rc<Cell<bool>>,
+    weather: Rc<RefCell<Weather>>,
     action_tx: mpsc::UnboundedSender<PanelAction>,
     config: Arc<Config>,
 }
 
-/// Helper to load SF Symbol icons with fallback
-fn sf_icon(name: &str, size: i32) -> Image {
-    let icon_paths = [
-        format!("/home/vib1240n/.local/share/rw/icons/{}.svg", name),
-        format!("/usr/share/rw/icons/{}.svg", name),
-    ];
-
-    for path in &icon_paths {
-        if std::path::Path::new(path).exists() {
-            let img = Image::from_file(path);
-            img.set_pixel_size(size);
-            return img;
+/// Work on a thread, finish on the UI thread
+fn bg<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static, done: impl FnOnce(T) + 'static) {
+    glib::spawn_future_local(async move {
+        if let Ok(v) = gio::spawn_blocking(work).await {
+            done(v);
         }
-    }
+    });
+}
 
-    // Fallback to GTK symbolic icons
-    let fallback = match name {
-        "bell.fill" => "notification-symbolic",
-        "gearshape.fill" => "emblem-system-symbolic",
-        "trash.fill" => "user-trash-symbolic",
-        "checkmark.circle.fill" => "emblem-ok-symbolic",
-        "exclamationmark.triangle.fill" => "dialog-warning-symbolic",
-        "xmark.circle.fill" => "dialog-error-symbolic",
-        "info.circle.fill" => "dialog-information-symbolic",
-        "message.fill" => "mail-unread-symbolic",
-        _ => "dialog-information-symbolic",
-    };
+fn label(text: &str, class: &str) -> Label {
+    let l = Label::new(Some(text));
+    l.add_css_class(class);
+    l.set_halign(Align::Start);
+    l
+}
 
-    let img = Image::from_icon_name(fallback);
-    img.set_pixel_size(size);
-    img
+fn round_button(icon: &'static str, size: i32) -> Button {
+    let b = Button::new();
+    b.add_css_class("nc-round-btn");
+    b.set_valign(Align::Start);
+    b.set_child(Some(&Icon::new(icon, size).image));
+    b
 }
 
 impl NotificationPanel {
@@ -78,197 +95,176 @@ impl NotificationPanel {
             .decorated(false)
             .resizable(false)
             .build();
-
-        // Layer shell setup
         window.init_layer_shell();
         window.set_layer(Layer::Overlay);
         window.set_namespace("rust-widgets");
         window.set_keyboard_mode(KeyboardMode::OnDemand);
-
-        // Position from config
         apply_position(&window, &config);
 
-        // ==================== OUTER WRAPPER (for blur corner fix) ====================
-        let outer_wrapper = Box::new(Orientation::Vertical, 0);
-        outer_wrapper.set_margin_start(16);
-        outer_wrapper.set_margin_end(16);
-        outer_wrapper.set_margin_top(16);
-        outer_wrapper.set_margin_bottom(16);
+        // margin keeps the blurred area off the rounded corners
+        let outer = Box::new(Orientation::Vertical, 0);
+        outer.set_margin_start(16);
+        outer.set_margin_end(16);
+        outer.set_margin_top(16);
+        outer.set_margin_bottom(16);
 
-        // ==================== MAIN CONTAINER ====================
-        let container = Box::new(Orientation::Vertical, 0);
-        container.add_css_class("nc-container");
-        container.set_width_request(config.appearance.panel_width);
-        // Let the container expand vertically to fit content
-        container.set_vexpand(true);
+        let panel = Box::new(Orientation::Vertical, 0);
+        panel.add_css_class("widget-container");
+        panel.add_css_class("cc-panel");
+        panel.add_css_class("nc-panel");
+        panel.set_width_request(config.appearance.panel_width);
 
-        // ==================== HEADER ====================
-        let header = Box::new(Orientation::Horizontal, 12);
-        header.add_css_class("nc-header");
-
-        // Bell icon wrapper (rounded box like Figma)
-        let bell_wrapper = Box::new(Orientation::Vertical, 0);
-        bell_wrapper.add_css_class("nc-bell-wrapper");
-        bell_wrapper.set_valign(gtk4::Align::Center);
-        let bell_icon = sf_icon("bell.fill", 20);
-        bell_icon.add_css_class("nc-bell-icon");
-        bell_wrapper.append(&bell_icon);
-        header.append(&bell_wrapper);
-
-        // Title and subtitle column
-        let title_box = Box::new(Orientation::Vertical, 2);
-        title_box.set_hexpand(true);
-        title_box.set_valign(gtk4::Align::Center);
-
-        let title = Label::new(Some("Notifications"));
-        title.add_css_class("nc-title");
-        title.set_halign(gtk4::Align::Start);
-        title_box.append(&title);
-
-        let header_subtitle = Label::new(Some("0 unread"));
-        header_subtitle.add_css_class("nc-subtitle");
-        header_subtitle.set_halign(gtk4::Align::Start);
-        title_box.append(&header_subtitle);
-
-        header.append(&title_box);
-
-        // Settings button
-        let settings_btn = Button::new();
-        settings_btn.add_css_class("nc-settings-btn");
-        let settings_icon = sf_icon("gearshape.fill", 20);
-        settings_icon.add_css_class("nc-settings-icon");
-        settings_btn.set_child(Some(&settings_icon));
-        let action_tx_clone = action_tx.clone();
-        settings_btn.connect_clicked(move |_| {
-            let _ = action_tx_clone.send(PanelAction::OpenSettings);
+        // ---- heading ----
+        let heading = Box::new(Orientation::Horizontal, 0);
+        heading.add_css_class("nc-heading");
+        let titles = Box::new(Orientation::Vertical, 0);
+        titles.set_hexpand(true);
+        titles.append(&label("NOTIFICATION CENTER", "nc-eyebrow"));
+        let greeting = label("Hello", "nc-greeting");
+        titles.append(&greeting);
+        heading.append(&titles);
+        let close = round_button("close", 17);
+        let tx = action_tx.clone();
+        close.connect_clicked(move |_| {
+            let _ = tx.send(PanelAction::Close);
         });
-        header.append(&settings_btn);
+        heading.append(&close);
+        panel.append(&heading);
 
-        container.append(&header);
+        // ---- date card ----
+        let date_card = Box::new(Orientation::Horizontal, 0);
+        date_card.add_css_class("cc-card");
+        date_card.add_css_class("nc-date-card");
+        let day_number = label("", "nc-date-number");
+        day_number.set_valign(Align::Center);
+        date_card.append(&day_number);
+        let copy = Box::new(Orientation::Vertical, 0);
+        copy.add_css_class("nc-date-copy");
+        copy.set_hexpand(true);
+        copy.set_valign(Align::Center);
+        let weekday = label("", "nc-weekday");
+        let month = label("", "nc-month");
+        copy.append(&weekday);
+        copy.append(&month);
+        date_card.append(&copy);
+        let weather_box = Box::new(Orientation::Horizontal, 8);
+        weather_box.add_css_class("nc-weather");
+        weather_box.set_valign(Align::Center);
+        weather_box.append(&Icon::new("sun", 19).image);
+        let wt = Box::new(Orientation::Vertical, 0);
+        let weather_temp = label("", "nc-weather-temp");
+        let weather_cond = label("", "nc-weather-cond");
+        wt.append(&weather_temp);
+        wt.append(&weather_cond);
+        weather_box.append(&wt);
+        weather_box.set_visible(false);
+        date_card.append(&weather_box);
+        panel.append(&date_card);
 
-        // ==================== SCROLL AREA ====================
+        // ---- notifications ----
+        let list = Box::new(Orientation::Vertical, 8);
+        list.add_css_class("nc-list-box");
         let scroll = ScrolledWindow::new();
-        scroll.set_vexpand(true);
         scroll.set_policy(PolicyType::Never, PolicyType::Automatic);
-        // Set both min and max content height for proper expansion
-        scroll.set_min_content_height(150);
-        scroll.set_max_content_height(600); // Match Figma's max-h-[600px]
-        scroll.add_css_class("nc-scroll");
+        scroll.set_propagate_natural_height(true);
+        scroll.set_max_content_height(MAX_LIST_HEIGHT);
+        scroll.add_css_class("nc-scroller");
+        scroll.set_child(Some(&list));
+        panel.append(&scroll);
 
-        let list_box = ListBox::new();
-        list_box.add_css_class("nc-list");
-        list_box.set_selection_mode(gtk4::SelectionMode::None);
-        scroll.set_child(Some(&list_box));
+        // ---- do not disturb ----
+        let dnd_row = Box::new(Orientation::Horizontal, 9);
+        dnd_row.add_css_class("nc-dnd-row");
+        let dnd_icon = Box::new(Orientation::Vertical, 0);
+        dnd_icon.add_css_class("nc-dnd-icon");
+        dnd_icon.set_valign(Align::Center);
+        dnd_icon.set_vexpand(false);
+        let mi = Icon::new("moon", 17);
+        mi.image.set_vexpand(true);
+        dnd_icon.append(&mi.image);
+        dnd_row.append(&dnd_icon);
+        let dt = Box::new(Orientation::Vertical, 0);
+        dt.set_hexpand(true);
+        dt.set_valign(Align::Center);
+        dt.append(&label("Do not disturb", "nc-dnd-title"));
+        dt.append(&label("Only critical notifications pop up", "nc-dnd-sub"));
+        dnd_row.append(&dt);
+        let dnd = Switch::new();
+        dnd.add_css_class("cc-switch");
+        dnd.set_valign(Align::Center);
+        dnd_row.append(&dnd);
+        panel.append(&dnd_row);
 
-        container.append(&scroll);
-
-        // ==================== EMPTY STATE ====================
-        let empty_state = Box::new(Orientation::Vertical, 12);
-        empty_state.add_css_class("nc-empty");
-        empty_state.set_vexpand(true);
-        empty_state.set_valign(gtk4::Align::Center);
-        empty_state.set_margin_top(48);
-        empty_state.set_margin_bottom(48);
-
-        let empty_icon = sf_icon("bell.fill", 48);
-        empty_icon.add_css_class("nc-empty-icon");
-        empty_state.append(&empty_icon);
-
-        let empty_label = Label::new(Some("No notifications"));
-        empty_label.add_css_class("nc-empty-label");
-        empty_state.append(&empty_label);
-
-        // ==================== FOOTER ====================
-        let footer = Box::new(Orientation::Horizontal, 0);
-        footer.add_css_class("nc-footer");
-
-        let clear_btn = Button::new();
-        clear_btn.add_css_class("nc-clear-btn");
-        clear_btn.set_hexpand(true);
-
-        let clear_content = Box::new(Orientation::Horizontal, 8);
-        clear_content.set_halign(gtk4::Align::Center);
-
-        let trash_icon = sf_icon("trash.fill", 16);
-        trash_icon.add_css_class("nc-trash-icon");
-        clear_content.append(&trash_icon);
-
-        let clear_label = Label::new(Some("Clear All"));
-        clear_label.add_css_class("nc-clear-label");
-        clear_content.append(&clear_label);
-
-        clear_btn.set_child(Some(&clear_content));
-
-        let action_tx_clone = action_tx.clone();
-        clear_btn.connect_clicked(move |_| {
-            let _ = action_tx_clone.send(PanelAction::ClearAll);
+        let dnd_syncing = Rc::new(Cell::new(false));
+        let (tx, guard) = (action_tx.clone(), dnd_syncing.clone());
+        dnd.connect_state_set(move |_, on| {
+            if !guard.get() {
+                let _ = tx.send(PanelAction::SetDnd(on));
+            }
+            glib::Propagation::Proceed
         });
 
-        footer.append(&clear_btn);
-        container.append(&footer);
+        outer.append(&panel);
+        window.set_child(Some(&outer));
 
-        // ==================== ASSEMBLE ====================
-        outer_wrapper.append(&container);
-        window.set_child(Some(&outer_wrapper));
-
-        // Escape to close
         if config.behavior.close_on_escape {
-            let controller = gtk4::EventControllerKey::new();
-            let action_tx_clone = action_tx.clone();
-            controller.connect_key_pressed(move |_, key, _, _| {
+            let keys = gtk4::EventControllerKey::new();
+            let tx = action_tx.clone();
+            keys.connect_key_pressed(move |_, key, _, _| {
                 if key == gtk4::gdk::Key::Escape {
-                    let _ = action_tx_clone.send(PanelAction::Close);
+                    let _ = tx.send(PanelAction::Close);
                     glib::Propagation::Stop
                 } else {
                     glib::Propagation::Proceed
                 }
             });
-            window.add_controller(controller);
+            window.add_controller(keys);
         }
-
-        // Click outside to close
         if config.behavior.close_on_unfocus {
-            let focus_controller = gtk4::EventControllerFocus::new();
-            let action_tx_clone = action_tx.clone();
-            focus_controller.connect_leave(move |_| {
-                let _ = action_tx_clone.send(PanelAction::Close);
+            let focus = gtk4::EventControllerFocus::new();
+            let tx = action_tx.clone();
+            focus.connect_leave(move |_| {
+                let _ = tx.send(PanelAction::Close);
             });
-            window.add_controller(focus_controller);
+            window.add_controller(focus);
         }
 
         Self {
             window,
-            list_box,
-            header_subtitle,
-            empty_state,
-            footer,
+            list,
+            greeting,
+            day_number,
+            weekday,
+            month,
+            weather_box,
+            weather_temp,
+            weather_cond,
+            dnd,
+            dnd_syncing,
+            weather: Rc::new(RefCell::new(Weather::default())),
             action_tx,
             config,
         }
     }
 
-    /// Show the panel
     pub fn show(&self) {
+        self.refresh_header();
+        self.refresh_weather();
         self.window.present();
-
         if self.config.animation.enabled {
             animate_panel_in(&self.window, &self.config);
         }
     }
 
-    /// Hide the panel
     pub fn hide(&self) {
         if self.config.animation.enabled {
             let w = self.window.clone();
-            animate_panel_out(&self.window, &self.config, move || {
-                w.set_visible(false);
-            });
+            animate_panel_out(&self.window, &self.config, move || w.set_visible(false));
         } else {
             self.window.set_visible(false);
         }
     }
 
-    /// Toggle visibility
     pub fn toggle(&self) {
         if self.window.is_visible() {
             self.hide();
@@ -277,289 +273,324 @@ impl NotificationPanel {
         }
     }
 
-    /// Check if visible
     pub fn is_visible(&self) -> bool {
         self.window.is_visible()
     }
 
-    /// Update DND switch state (no switch in this design, kept for compatibility)
-    pub fn set_dnd(&self, _enabled: bool) {
-        // No DND switch in Figma design
+    /// Reflect the daemon's DND state in the switch (without re-sending it)
+    pub fn set_dnd(&self, enabled: bool) {
+        self.dnd_syncing.set(true);
+        self.dnd.set_active(enabled);
+        self.dnd_syncing.set(false);
     }
 
-    /// Update the panel with current notifications
-    pub fn update(&self, store: &NotificationStore) {
-        // Clear existing
-        while let Some(child) = self.list_box.first_child() {
-            self.list_box.remove(&child);
-        }
-
-        let notifications = store.all();
-        let count = notifications.len();
-
-        // Update subtitle
-        let subtitle_text = if count == 1 {
-            "1 unread".to_string()
-        } else {
-            format!("{} unread", count)
+    fn refresh_header(&self) {
+        let Ok(now) = glib::DateTime::now_local() else { return };
+        let greeting = match now.hour() {
+            5..=11 => "Good morning",
+            12..=16 => "Good afternoon",
+            17..=21 => "Good evening",
+            _ => "Good night",
         };
-        self.header_subtitle.set_text(&subtitle_text);
-
-        if count == 0 {
-            // Show empty state, hide footer
-            self.list_box.append(&self.empty_state);
-            self.footer.set_visible(false);
-        } else {
-            // Add notification rows, show footer
-            for notif in notifications {
-                let row = self.build_notification_row(notif);
-                self.list_box.append(&row);
-            }
-            self.footer.set_visible(true);
+        self.greeting.set_text(greeting);
+        self.day_number.set_text(&now.day_of_month().to_string());
+        if let Ok(s) = now.format("%A") {
+            self.weekday.set_text(&s);
+        }
+        if let Ok(s) = now.format("%B %Y") {
+            self.month.set_text(&s);
         }
     }
 
-    /// Build a notification row matching Figma design
-    fn build_notification_row(&self, notification: &Notification) -> ListBoxRow {
-        let row = ListBoxRow::new();
-        row.add_css_class("nc-row");
-        row.set_activatable(false);
-        row.set_selectable(false);
-
-        // Determine notification type for icon/color
-        let notif_type = get_notification_type(notification);
-
-        // Main card container
-        let card = Box::new(Orientation::Horizontal, 12);
-        card.add_css_class("nc-card");
-        card.add_css_class(&format!("nc-card-{}", notif_type));
-
-        // Icon wrapper with colored background
-        let icon_wrapper = Box::new(Orientation::Vertical, 0);
-        icon_wrapper.add_css_class("nc-icon-wrapper");
-        icon_wrapper.add_css_class(&format!("nc-icon-wrapper-{}", notif_type));
-        icon_wrapper.set_valign(gtk4::Align::Start);
-
-        let type_icon = sf_icon(get_type_icon(&notif_type), 20);
-        type_icon.add_css_class("nc-type-icon");
-        type_icon.add_css_class(&format!("nc-type-icon-{}", notif_type));
-        icon_wrapper.append(&type_icon);
-
-        card.append(&icon_wrapper);
-
-        // Content area
-        let content = Box::new(Orientation::Vertical, 4);
-        content.add_css_class("nc-card-content");
-        content.set_hexpand(true);
-
-        // Top row: title + time
-        let top_row = Box::new(Orientation::Horizontal, 8);
-
-        let title_col = Box::new(Orientation::Vertical, 2);
-        title_col.set_hexpand(true);
-
-        let title = Label::new(Some(&notification.summary));
-        title.add_css_class("nc-card-title");
-        title.set_halign(gtk4::Align::Start);
-        title.set_ellipsize(gtk4::pango::EllipsizeMode::End);
-        title.set_max_width_chars(30);
-        title_col.append(&title);
-
-        let app_label = Label::new(Some(&notification.app_name));
-        app_label.add_css_class("nc-card-app");
-        app_label.set_halign(gtk4::Align::Start);
-        title_col.append(&app_label);
-
-        top_row.append(&title_col);
-
-        let time_label = Label::new(Some(&notification.time_ago()));
-        time_label.add_css_class("nc-card-time");
-        time_label.set_valign(gtk4::Align::Start);
-        top_row.append(&time_label);
-
-        content.append(&top_row);
-
-        // Body text
-        if !notification.body.is_empty() {
-            let body = Label::new(Some(&strip_markup(&notification.body)));
-            body.add_css_class("nc-card-body");
-            body.set_halign(gtk4::Align::Start);
-            body.set_wrap(true);
-            body.set_wrap_mode(gtk4::pango::WrapMode::WordChar);
-            body.set_max_width_chars(40);
-            body.set_lines(2);
-            body.set_ellipsize(gtk4::pango::EllipsizeMode::End);
-            content.append(&body);
+    /// wttr.in, only when shown and the cached value is older than refresh_minutes
+    fn refresh_weather(&self) {
+        let cfg = &self.config.weather;
+        if !cfg.enabled {
+            self.weather_box.set_visible(false);
+            return;
         }
-
-        // Progress bar (if present)
-        if let Some(progress) = notification.progress {
-            let progress_bar = ProgressBar::new();
-            progress_bar.set_fraction(progress as f64 / 100.0);
-            progress_bar.add_css_class("nc-card-progress");
-            progress_bar.set_margin_top(8);
-            content.append(&progress_bar);
+        let w = self.weather.borrow();
+        let fresh = w.fetched.is_some_and(|t| t.elapsed() < Duration::from_secs(cfg.refresh_minutes.max(5) * 60));
+        let have = !w.temp.is_empty();
+        drop(w);
+        if have {
+            self.weather_temp.set_text(&self.weather.borrow().temp);
+            self.weather_cond.set_text(&self.weather.borrow().cond);
+            self.weather_box.set_visible(true);
         }
-
-        // Actions (if present)
-        let visible_actions: Vec<_> = notification
-            .actions
-            .iter()
-            .filter(|(id, _)| id != "default")
-            .collect();
-
-        if !visible_actions.is_empty() {
-            let actions_box = Box::new(Orientation::Horizontal, 8);
-            actions_box.add_css_class("nc-card-actions");
-            actions_box.set_margin_top(8);
-
-            for (action_id, label) in visible_actions {
-                let btn = Button::with_label(label);
-                btn.add_css_class("nc-action-btn");
-                let action_tx = self.action_tx.clone();
-                let notif_id = notification.id;
-                let action_key = action_id.clone();
-                btn.connect_clicked(move |_| {
-                    let _ =
-                        action_tx.send(PanelAction::ActionInvoked(notif_id, action_key.clone()));
-                });
-                actions_box.append(&btn);
-            }
-
-            content.append(&actions_box);
+        if fresh {
+            return;
         }
-
-        card.append(&content);
-
-        // Dismiss button (shows on hover via CSS)
-        let dismiss_btn = Button::new();
-        dismiss_btn.set_icon_name("window-close-symbolic");
-        dismiss_btn.add_css_class("nc-dismiss-btn");
-        dismiss_btn.set_valign(gtk4::Align::Start);
-        let action_tx = self.action_tx.clone();
-        let notif_id = notification.id;
-        dismiss_btn.connect_clicked(move |_| {
-            let _ = action_tx.send(PanelAction::DismissOne(notif_id));
-        });
-        card.append(&dismiss_btn);
-
-        // Click on card to activate source app
-        let gesture = gtk4::GestureClick::new();
-        let action_tx = self.action_tx.clone();
-        let notif_id = notification.id;
-        let has_default = notification.actions.iter().any(|(a, _)| a == "default");
-        let desktop_entry = notification.desktop_entry.clone();
-        let app_name = notification.app_name.clone();
-        gesture.connect_released(move |_, _, _, _| {
-            if has_default {
-                let _ = action_tx.send(PanelAction::ActionInvoked(notif_id, "default".to_string()));
-            } else {
-                // Fallback: try to launch by desktop entry or app name
-                let entry = desktop_entry.as_deref().unwrap_or(&app_name);
-                let desktop_id = if entry.ends_with(".desktop") {
-                    entry.to_string()
-                } else {
-                    format!("{}.desktop", entry.to_lowercase())
-                };
-                if let Some(app_info) = gtk4::gio::DesktopAppInfo::new(&desktop_id) {
-                    let _ = app_info.launch(&[], gtk4::gio::AppLaunchContext::NONE);
+        let loc = cfg.location.trim().replace(' ', "+");
+        let unit = match cfg.units.as_str() {
+            "metric" => "&m",
+            "imperial" => "&u",
+            _ => "",
+        };
+        let url = format!("https://wttr.in/{loc}?format=%t|%C{unit}");
+        let (cache, temp_l, cond_l, wbox) =
+            (self.weather.clone(), self.weather_temp.clone(), self.weather_cond.clone(), self.weather_box.clone());
+        bg(
+            move || {
+                // curl, not GIO: GIO has no https backend on this system
+                let out = std::process::Command::new("curl")
+                    .args(["-fsS", "--max-time", "6", &url])
+                    .output()
+                    .ok()
+                    .filter(|o| o.status.success())?;
+                let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                let (t, c) = s.split_once('|')?;
+                // "+22°C" -> "22°"
+                let temp = t.trim().trim_start_matches('+').trim_end_matches(['C', 'F']).to_string();
+                (!temp.is_empty() && !s.contains("Unknown")).then(|| (temp, c.trim().to_string()))
+            },
+            move |res| {
+                let mut w = cache.borrow_mut();
+                w.fetched = Some(Instant::now());
+                if let Some((t, c)) = res {
+                    temp_l.set_text(&t);
+                    cond_l.set_text(&c);
+                    wbox.set_visible(true);
+                    w.temp = t;
+                    w.cond = c;
                 }
-            }
-        });
-        content.add_controller(gesture);
+            },
+        );
+    }
 
-        row.set_child(Some(&card));
+    pub fn update(&self, store: &NotificationStore) {
+        while let Some(c) = self.list.first_child() {
+            self.list.remove(&c);
+        }
+        let all = store.all();
+        if all.is_empty() {
+            self.list.append(&self.section("TODAY", false));
+            self.list.append(&caught_up());
+            return;
+        }
+        let (today, earlier): (Vec<&Notification>, Vec<&Notification>) = all.into_iter().partition(|n| n.is_today());
+        let mut first = true;
+        for (title, items) in [("TODAY", today), ("EARLIER", earlier)] {
+            if items.is_empty() {
+                continue;
+            }
+            self.list.append(&self.section(title, first));
+            first = false;
+            for n in items {
+                self.list.append(&self.notice(n));
+            }
+        }
+    }
+
+    fn section(&self, title: &str, with_clear: bool) -> Box {
+        let row = Box::new(Orientation::Horizontal, 0);
+        row.add_css_class("nc-section-label");
+        let l = label(title, "nc-section-title");
+        l.set_hexpand(true);
+        row.append(&l);
+        if with_clear {
+            let clear = Button::with_label("Clear all");
+            clear.add_css_class("nc-clear-all");
+            let tx = self.action_tx.clone();
+            clear.connect_clicked(move |_| {
+                let _ = tx.send(PanelAction::ClearAll);
+            });
+            row.append(&clear);
+        }
         row
     }
+
+    fn notice(&self, n: &Notification) -> Overlay {
+        let overlay = Overlay::new();
+        let card = Box::new(Orientation::Horizontal, 10);
+        card.add_css_class("cc-card");
+        card.add_css_class("nc-notice");
+
+        // icon tile: category glyph on a coloured tile, else the app's icon
+        let tile = Box::new(Orientation::Vertical, 0);
+        tile.add_css_class("nc-notice-icon");
+        tile.set_valign(Align::Start);
+        tile.set_vexpand(false);
+        let (kind, glyph) = classify(n);
+        tile.add_css_class(&format!("nc-kind-{kind}"));
+        let img = match glyph {
+            Some(g) => Icon::new(g, 19).image,
+            None => app_image(n).unwrap_or_else(|| Icon::new("bell", 19).image),
+        };
+        img.set_vexpand(true);
+        img.set_halign(Align::Center);
+        tile.append(&img);
+        card.append(&tile);
+
+        // content
+        let content = Box::new(Orientation::Vertical, 0);
+        content.add_css_class("nc-notice-content");
+        content.set_hexpand(true);
+        let meta = Box::new(Orientation::Horizontal, 10);
+        let app = label(if n.app_name.is_empty() { "Notification" } else { n.app_name.as_str() }, "nc-notice-app");
+        app.set_hexpand(true);
+        app.set_ellipsize(gtk4::pango::EllipsizeMode::End);
+        meta.append(&app);
+        meta.append(&label(&n.short_age(), "nc-notice-time"));
+        content.append(&meta);
+
+        if !n.summary.is_empty() {
+            let s = label(&strip_markup(&n.summary), "nc-notice-summary");
+            s.set_wrap(true);
+            s.set_wrap_mode(gtk4::pango::WrapMode::WordChar);
+            s.set_lines(2);
+            s.set_ellipsize(gtk4::pango::EllipsizeMode::End);
+            s.set_xalign(0.0);
+            content.append(&s);
+        }
+        if !n.body.is_empty() {
+            let b = label(&strip_markup(&n.body), "nc-notice-body");
+            b.set_wrap(true);
+            b.set_wrap_mode(gtk4::pango::WrapMode::WordChar);
+            b.set_lines(2);
+            b.set_ellipsize(gtk4::pango::EllipsizeMode::End);
+            b.set_xalign(0.0);
+            content.append(&b);
+        }
+        if let Some(p) = n.progress {
+            let bar = ProgressBar::new();
+            bar.set_fraction(p.clamp(0, 100) as f64 / 100.0);
+            bar.add_css_class("nc-notice-progress");
+            content.append(&bar);
+        }
+        let actions: Vec<_> = n.actions.iter().filter(|(id, _)| id != "default").collect();
+        if !actions.is_empty() {
+            let row = Box::new(Orientation::Horizontal, 6);
+            for (id, text) in actions {
+                let b = Button::with_label(text);
+                b.add_css_class("nc-notice-action");
+                let (tx, nid, key) = (self.action_tx.clone(), n.id, id.clone());
+                b.connect_clicked(move |_| {
+                    let _ = tx.send(PanelAction::ActionInvoked(nid, key.clone()));
+                });
+                row.append(&b);
+            }
+            content.append(&row);
+        }
+        card.append(&content);
+        overlay.set_child(Some(&card));
+
+        // dismiss (top-right, like the design's absolute button)
+        let dismiss = Button::new();
+        dismiss.add_css_class("nc-notice-dismiss");
+        dismiss.set_halign(Align::End);
+        dismiss.set_valign(Align::Start);
+        dismiss.set_child(Some(&Icon::new("close", 14).image));
+        let (tx, nid) = (self.action_tx.clone(), n.id);
+        dismiss.connect_clicked(move |_| {
+            let _ = tx.send(PanelAction::DismissOne(nid));
+        });
+        overlay.add_overlay(&dismiss);
+
+        // click the card: default action, else open the app
+        let click = gtk4::GestureClick::new();
+        let (tx, nid) = (self.action_tx.clone(), n.id);
+        let has_default = n.actions.iter().any(|(a, _)| a == "default");
+        let entry = n.desktop_entry.clone().unwrap_or_else(|| n.app_name.clone());
+        click.connect_released(move |_, _, _, _| {
+            if has_default {
+                let _ = tx.send(PanelAction::ActionInvoked(nid, "default".into()));
+            } else if let Some(info) = desktop_info(&entry) {
+                let _ = info.launch(&[], gio::AppLaunchContext::NONE);
+            }
+        });
+        content.add_controller(click);
+        overlay
+    }
 }
 
-/// Determine notification type based on app name and content
-fn get_notification_type(notification: &Notification) -> String {
-    let app_lower = notification.app_name.to_lowercase();
-    let summary_lower = notification.summary.to_lowercase();
+fn caught_up() -> Box {
+    let b = Box::new(Orientation::Vertical, 0);
+    b.add_css_class("nc-caught-up");
+    b.set_valign(Align::Center);
+    let tile = Box::new(Orientation::Vertical, 0);
+    tile.add_css_class("nc-caught-up-icon");
+    tile.set_halign(Align::Center);
+    tile.set_vexpand(false); // stop the icon's vexpand propagating: the tile stays 45x45
+    let i = Icon::new("bell", 22);
+    i.image.set_vexpand(true);
+    tile.append(&i.image);
+    b.append(&tile);
+    let t = Label::new(Some("You're all caught up"));
+    t.add_css_class("nc-caught-up-title");
+    b.append(&t);
+    let s = Label::new(Some("New notifications will appear here."));
+    s.add_css_class("nc-caught-up-sub");
+    b.append(&s);
+    b
+}
 
-    // Check urgency first
-    if matches!(notification.urgency, crate::notification::Urgency::Critical) {
-        return "error".to_string();
+/// (css kind, design glyph). Unknown apps get their own icon (glyph None).
+fn classify(n: &Notification) -> (&'static str, Option<&'static str>) {
+    let app = n.app_name.to_lowercase();
+    let entry = n.desktop_entry.as_deref().unwrap_or("").to_lowercase();
+    let cat = n.category.as_deref().unwrap_or("");
+    let summary = n.summary.to_lowercase();
+    let any = |words: &[&str]| words.iter().any(|w| app.contains(w) || entry.contains(w));
+
+    if n.urgency == Urgency::Critical {
+        return ("critical", Some("alert"));
     }
-
-    // Success indicators
-    if app_lower.contains("vscode") || app_lower.contains("code") || app_lower.contains("build") {
-        if summary_lower.contains("success")
-            || summary_lower.contains("completed")
-            || summary_lower.contains("done")
-        {
-            return "success".to_string();
-        }
-    }
-
-    // Warning indicators
-    if app_lower.contains("battery") || app_lower.contains("power") {
-        if summary_lower.contains("low") || summary_lower.contains("warning") {
-            return "warning".to_string();
-        }
-    }
-
-    // Error indicators
-    if summary_lower.contains("error")
-        || summary_lower.contains("failed")
-        || summary_lower.contains("failure")
+    if cat.starts_with("im") || cat.starts_with("email")
+        || any(&["discord", "vesktop", "telegram", "signal", "whatsapp", "slack", "element", "messages", "thunderbird", "mail"])
     {
-        return "error".to_string();
+        return ("message", Some("message"));
     }
-    if app_lower.contains("network") && summary_lower.contains("disconnect") {
-        return "error".to_string();
+    if summary.contains("screenshot") || any(&["grim", "hyprshot", "swappy", "flameshot", "satty", "screenshot"]) {
+        return ("capture", Some("camera"));
     }
-
-    // Default to info
-    "info".to_string()
+    if cat.starts_with("transfer") || summary.contains("update") || summary.contains("download")
+        || any(&["pacman", "paru", "yay", "pamac", "update", "software", "octopi"])
+    {
+        return ("update", Some("download"));
+    }
+    ("app", None)
 }
 
-/// Get SF Symbol icon name for notification type
-fn get_type_icon(notif_type: &str) -> &'static str {
-    match notif_type {
-        "success" => "checkmark.circle.fill",
-        "warning" => "exclamationmark.triangle.fill",
-        "error" => "xmark.circle.fill",
-        _ => "info.circle.fill",
-    }
+fn desktop_info(entry: &str) -> Option<gio::DesktopAppInfo> {
+    let id = if entry.ends_with(".desktop") { entry.to_string() } else { format!("{}.desktop", entry.to_lowercase()) };
+    gio::DesktopAppInfo::new(&id)
+}
+
+/// The sender's icon: app_icon (name or path), else its desktop entry's icon
+fn app_image(n: &Notification) -> Option<gtk4::Image> {
+    let img = if let Some(path) = n.app_icon.strip_prefix("file://").or(Some(n.app_icon.as_str())).filter(|p| p.starts_with('/')) {
+        std::path::Path::new(path).exists().then(|| gtk4::Image::from_file(path))?
+    } else if !n.app_icon.is_empty()
+        && gtk4::gdk::Display::default()
+            .map(|d| gtk4::IconTheme::for_display(&d).has_icon(&n.app_icon))
+            .unwrap_or(false)
+    {
+        gtk4::Image::from_icon_name(&n.app_icon)
+    } else {
+        let entry = n.desktop_entry.clone().unwrap_or_else(|| n.app_name.clone());
+        let icon = desktop_info(&entry)?.icon()?;
+        gtk4::Image::from_gicon(&icon)
+    };
+    img.set_pixel_size(22);
+    Some(img)
 }
 
 fn apply_position(window: &gtk4::Window, config: &Config) {
-    window.set_anchor(Edge::Top, false);
-    window.set_anchor(Edge::Bottom, false);
-    window.set_anchor(Edge::Left, false);
-    window.set_anchor(Edge::Right, false);
-
-    match config.position.anchor.as_str() {
-        "top-left" => {
-            window.set_anchor(Edge::Top, true);
-            window.set_anchor(Edge::Left, true);
-        }
-        "top-center" => {
-            window.set_anchor(Edge::Top, true);
-        }
-        "top-right" => {
-            window.set_anchor(Edge::Top, true);
-            window.set_anchor(Edge::Right, true);
-        }
-        "bottom-left" => {
-            window.set_anchor(Edge::Bottom, true);
-            window.set_anchor(Edge::Left, true);
-        }
-        "bottom-center" => {
-            window.set_anchor(Edge::Bottom, true);
-        }
-        "bottom-right" => {
-            window.set_anchor(Edge::Bottom, true);
-            window.set_anchor(Edge::Right, true);
-        }
-        _ => {
-            window.set_anchor(Edge::Top, true);
-            window.set_anchor(Edge::Right, true);
-        }
+    for e in [Edge::Top, Edge::Bottom, Edge::Left, Edge::Right] {
+        window.set_anchor(e, false);
     }
-
+    let edges: &[Edge] = match config.position.anchor.as_str() {
+        "top-left" => &[Edge::Top, Edge::Left],
+        "top-center" => &[Edge::Top],
+        "bottom-left" => &[Edge::Bottom, Edge::Left],
+        "bottom-center" => &[Edge::Bottom],
+        "bottom-right" => &[Edge::Bottom, Edge::Right],
+        _ => &[Edge::Top, Edge::Right],
+    };
+    for e in edges {
+        window.set_anchor(*e, true);
+    }
     window.set_margin(Edge::Top, config.position.margin_top);
     window.set_margin(Edge::Right, config.position.margin_right);
     window.set_margin(Edge::Bottom, config.position.margin_bottom);
@@ -568,28 +599,20 @@ fn apply_position(window: &gtk4::Window, config: &Config) {
 
 fn animate_panel_in(window: &gtk4::Window, config: &Config) {
     let steps = 20u32;
-    let step_duration = config.animation.duration / steps as u64;
-    let step_count = Rc::new(std::cell::Cell::new(0u32));
-    let start_margin = -200;
-    let final_margin = config.position.margin_top;
-
-    window.set_margin(Edge::Top, start_margin);
+    let step = Duration::from_millis(config.animation.duration / steps as u64);
+    let count = Rc::new(Cell::new(0u32));
+    let (start, end) = (-200, config.position.margin_top);
+    window.set_margin(Edge::Top, start);
     window.set_opacity(0.0);
-
     let w = window.clone();
-    glib::timeout_add_local(Duration::from_millis(step_duration), move || {
-        let current = step_count.get();
-        let progress = (current + 1) as f64 / steps as f64;
-        let eased = 1.0 - (1.0 - progress).powi(3);
-
-        let margin = start_margin + ((final_margin - start_margin) as f64 * eased) as i32;
-        w.set_margin(Edge::Top, margin);
-        w.set_opacity(eased);
-
-        step_count.set(current + 1);
-
-        if current + 1 >= steps {
-            w.set_margin(Edge::Top, final_margin);
+    glib::timeout_add_local(step, move || {
+        let i = count.get() + 1;
+        count.set(i);
+        let t = 1.0 - (1.0 - i as f64 / steps as f64).powi(3);
+        w.set_margin(Edge::Top, start + ((end - start) as f64 * t) as i32);
+        w.set_opacity(t);
+        if i >= steps {
+            w.set_margin(Edge::Top, end);
             w.set_opacity(1.0);
             glib::ControlFlow::Break
         } else {
@@ -598,31 +621,20 @@ fn animate_panel_in(window: &gtk4::Window, config: &Config) {
     });
 }
 
-fn animate_panel_out<F>(window: &gtk4::Window, config: &Config, on_complete: F)
-where
-    F: Fn() + 'static,
-{
+fn animate_panel_out<F: Fn() + 'static>(window: &gtk4::Window, config: &Config, done: F) {
     let steps = 15u32;
-    let step_duration = config.animation.duration / steps as u64;
-    let step_count = Rc::new(std::cell::Cell::new(0u32));
-    let start_margin = window.margin(Edge::Top);
-    let end_margin = -200;
-    let on_complete = Rc::new(on_complete);
-
+    let step = Duration::from_millis(config.animation.duration / steps as u64);
+    let count = Rc::new(Cell::new(0u32));
+    let (start, end) = (window.margin(Edge::Top), -200);
     let w = window.clone();
-    glib::timeout_add_local(Duration::from_millis(step_duration), move || {
-        let current = step_count.get();
-        let progress = (current + 1) as f64 / steps as f64;
-        let eased = progress.powi(3);
-
-        let margin = start_margin + ((end_margin - start_margin) as f64 * eased) as i32;
-        w.set_margin(Edge::Top, margin);
-        w.set_opacity(1.0 - eased);
-
-        step_count.set(current + 1);
-
-        if current + 1 >= steps {
-            on_complete();
+    glib::timeout_add_local(step, move || {
+        let i = count.get() + 1;
+        count.set(i);
+        let t = (i as f64 / steps as f64).powi(3);
+        w.set_margin(Edge::Top, start + ((end - start) as f64 * t) as i32);
+        w.set_opacity(1.0 - t);
+        if i >= steps {
+            done();
             glib::ControlFlow::Break
         } else {
             glib::ControlFlow::Continue
@@ -632,14 +644,9 @@ where
 
 /// Strip basic HTML/pango markup
 fn strip_markup(text: &str) -> String {
-    let mut result = text.to_string();
-    for tag in &["<b>", "</b>", "<i>", "</i>", "<u>", "</u>", "<br>", "<br/>"] {
-        result = result.replace(tag, "");
+    let mut r = text.to_string();
+    for tag in ["<b>", "</b>", "<i>", "</i>", "<u>", "</u>", "<br>", "<br/>"] {
+        r = r.replace(tag, "");
     }
-    result = result
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&")
-        .replace("&quot;", "\"");
-    result
+    r.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&").replace("&quot;", "\"")
 }

@@ -1,6 +1,8 @@
 pub mod config;
 pub mod css;
 pub mod position;
+pub mod icons;
+pub mod theme;
 pub mod widget;
 
 pub use config::Config;

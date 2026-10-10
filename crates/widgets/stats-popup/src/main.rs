@@ -445,13 +445,23 @@ fn update_stats(
     }
 }
 
-fn update_bar_class(bar: &ProgressBar, usage: f32, config: &Rc<Config>) {
-    bar.remove_css_class("warning");
-    bar.remove_css_class("critical");
-
-    if usage >= config.temperatures.critical_threshold {
-        bar.add_css_class("critical");
-    } else if usage >= config.temperatures.warning_threshold {
-        bar.add_css_class("warning");
+/// Usage bars always carry a level so they read at a glance:
+/// < 50% ok (green), 50-80% warning (yellow), >= 80% critical (red).
+/// (Temperatures keep their own thresholds from [temperatures].)
+fn update_bar_class(bar: &ProgressBar, usage: f32, _config: &Rc<Config>) {
+    const WARN: f32 = 50.0;
+    const CRIT: f32 = 80.0;
+    let level = if usage >= CRIT {
+        "critical"
+    } else if usage >= WARN {
+        "warning"
+    } else {
+        "ok"
+    };
+    for c in ["ok", "warning", "critical"] {
+        if c != level {
+            bar.remove_css_class(c);
+        }
     }
+    bar.add_css_class(level);
 }
